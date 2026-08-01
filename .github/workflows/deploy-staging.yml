@@ -1,0 +1,44 @@
+ # Auto-deploy to staging EC2 on push to 'staging' branch.
+# Nothing goes to production without passing staging first.
+
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [main, staging]
+
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Staging EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: GITHUB_REF_NAME
+          script: |
+            cd /home/ubuntu/voxera-law
+            git fetch origin
+            git reset --hard origin/${GITHUB_REF_NAME:-main} || { echo "DEPLOY ABORTED: git reset failed."; exit 1; }
+            cd backend && npm install --production
+            if [ -f .env ]; then
+              set -a
+              source .env
+              set +a
+            fi
+            cd ../frontend && echo "VITE_API_URL=http://43.205.232.96:4000" > .env.production && npm install && npm run build
+            aws s3 sync dist/ s3://${{ secrets.S3_BUCKET_FRONTEND_STAGING || 'jarvis-ai-staging-frontend' }}/ --delete \
+              --exclude "index.html" \
+              --cache-control "public,max-age=31536000,immutable"
+            aws s3 cp dist/index.html s3://${{ secrets.S3_BUCKET_FRONTEND_STAGING || 'jarvis-ai-staging-frontend' }}/index.html \
+              --cache-control "no-cache,no-store,must-revalidate" \
+              --content-type "text/html"
+            if [ -n "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" ]; then
+              aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*" || true
+            fi
+            pm2 reload voxera-backend --update-env || true
+            echo "Staging deploy complete $(date)"

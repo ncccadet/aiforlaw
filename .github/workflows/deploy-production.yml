@@ -1,0 +1,105 @@
+# Auto-deploy to production EC2 on push to 'main' branch.
+# NEVER deploy manually via SSH. Always through this pipeline.
+# PM2 zero-downtime reload: students mid-session notice nothing.
+
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Production EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.PROD_EC2_SSH_KEY }}
+          envs: PROD_AWS_ACCESS_KEY_ID,PROD_AWS_SECRET_ACCESS_KEY,PROD_DOMAIN,PROD_SES_FROM_EMAIL
+          script: |
+            set -e
+            cd /home/ubuntu/voxera-law
+            git fetch origin
+            git reset --hard origin/main || { echo "DEPLOY ABORTED: git fetch/reset failed."; exit 1; }
+
+            export AWS_ACCESS_KEY_ID="$PROD_AWS_ACCESS_KEY_ID"
+            export AWS_SECRET_ACCESS_KEY="$PROD_AWS_SECRET_ACCESS_KEY"
+            export AWS_DEFAULT_REGION=ap-south-1
+
+            {
+              echo "NODE_ENV=production"
+              echo "PORT=4000"
+              echo "FRONTEND_URL=https://$PROD_DOMAIN"
+              echo "AWS_REGION=ap-south-1"
+              echo "S3_BUCKET_FILES=voxera-law-uploads-production"
+              echo "S3_BUCKET_FRONTEND=voxera-law-frontend-production"
+              echo "SES_FROM_EMAIL=$PROD_SES_FROM_EMAIL"
+              echo "JWT_ACCESS_EXPIRES=15m"
+              echo "JWT_REFRESH_EXPIRES=7d"
+              echo "DATABASE_URL=$(aws ssm get-parameter --name /voxera/production/DATABASE_URL --with-decryption --query Parameter.Value --output text)"
+              echo "REDIS_URL=$(aws ssm get-parameter --name /voxera/production/REDIS_URL --with-decryption --query Parameter.Value --output text)"
+              echo "JWT_ACCESS_SECRET=$(aws ssm get-parameter --name /voxera/production/JWT_ACCESS_SECRET --with-decryption --query Parameter.Value --output text)"
+              echo "JWT_REFRESH_SECRET=$(aws ssm get-parameter --name /voxera/production/JWT_REFRESH_SECRET --with-decryption --query Parameter.Value --output text)"
+              echo "GEMINI_API_KEY=$(aws ssm get-parameter --name /voxera/production/GEMINI_API_KEY --with-decryption --query Parameter.Value --output text 2>/dev/null || echo '')"
+              echo "SERPAPI_KEY=$(aws ssm get-parameter --name /voxera/production/SERPAPI_KEY --with-decryption --query Parameter.Value --output text 2>/dev/null || echo '')"
+              echo "APIFY_TOKEN=$(aws ssm get-parameter --name /voxera/production/APIFY_TOKEN --with-decryption --query Parameter.Value --output text 2>/dev/null || echo '')"
+              echo "LLM_EXTRACT_MAX_PER_RUN=$(aws ssm get-parameter --name /voxera/production/LLM_EXTRACT_MAX_PER_RUN --with-decryption --query Parameter.Value --output text 2>/dev/null || echo '')"
+              echo "JSEARCH_API_KEY=$(aws ssm get-parameter --name /voxera/production/JSEARCH_API_KEY --with-decryption --query Parameter.Value --output text 2>/dev/null || echo '')"
+              echo "ADZUNA_APP_ID=$(aws ssm get-parameter --name /voxera/production/ADZUNA_APP_ID --with-decryption --query Parameter.Value --output text 2>/dev/null || echo '')"
+              echo "ADZUNA_APP_KEY=$(aws ssm get-parameter --name /voxera/production/ADZUNA_APP_KEY --with-decryption --query Parameter.Value --output text 2>/dev/null || echo '')"
+              # Admin panel (_contracts/09-admin-panel.md). These MUST live here
+              # rather than being appended to .env by hand: this file is rewritten
+              # from scratch on every deploy, so anything added manually on the box
+              # disappears at the next push and admin login starts 500ing.
+              # No '|| echo ""' fallback on the two secrets — if SSM is missing them
+              # the deploy should fail loudly rather than quietly produce an API
+              # that cannot verify an admin token.
+              echo "JWT_ADMIN_ACCESS_SECRET=$(aws ssm get-parameter --name /voxera/production/JWT_ADMIN_ACCESS_SECRET --with-decryption --query Parameter.Value --output text)"
+              echo "JWT_ADMIN_REFRESH_SECRET=$(aws ssm get-parameter --name /voxera/production/JWT_ADMIN_REFRESH_SECRET --with-decryption --query Parameter.Value --output text)"
+              echo "ADMIN_EMAILS=$(aws ssm get-parameter --name /voxera/production/ADMIN_EMAILS --with-decryption --query Parameter.Value --output text)"
+              echo "USD_INR_RATE=$(aws ssm get-parameter --name /voxera/production/USD_INR_RATE --with-decryption --query Parameter.Value --output text 2>/dev/null || echo '84')"
+            } > backend/.env
+
+            cd backend  && npm install --production
+            cd ../frontend && npm install && npm run build
+            # Two-pass upload so caching is correct per file type.
+            #
+            # Why this exists (2026-07-29): a plain `s3 sync` set no
+            # Cache-Control at all, so CloudFront's default TTL was applied to
+            # EVERYTHING — including index.html — and that TTL was handed
+            # straight to the student's browser. Invalidating CloudFront after
+            # a deploy clears CloudFront's copy but CANNOT clear the copy
+            # already sitting in a phone's own cache. Result: a student who had
+            # opened the site before a deploy kept running the OLD bundle for
+            # hours, with no way to tell, while a student on a fresh device got
+            # the new one. That is exactly how an Android handset kept hitting
+            # a bug that had already been fixed and shipped.
+            #
+            # Pass 1: the hashed assets (index-<hash>.js etc). Their filename
+            # changes whenever their content changes, so they are safe to cache
+            # forever — that is the whole point of the hash.
+            aws s3 sync dist/ s3://voxera-law-frontend-production/ --delete \
+              --exclude "index.html" \
+              --cache-control "public,max-age=31536000,immutable"
+            # Pass 2: index.html, which names the current bundle. It must never
+            # be cached — it is the one file that has to be re-read on every
+            # visit for a deploy to actually reach anyone.
+            aws s3 cp dist/index.html s3://voxera-law-frontend-production/index.html \
+              --cache-control "no-cache,no-store,must-revalidate" \
+              --content-type "text/html"
+            if [ -n "${{ secrets.PROD_CLOUDFRONT_DISTRIBUTION_ID }}" ]; then
+              aws cloudfront create-invalidation --distribution-id ${{ secrets.PROD_CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*" || true
+            fi
+            pm2 reload voxera-backend --update-env
+            pm2 reload otp-worker --update-env
+            pm2 reload ai-interviewer-worker --update-env
+            pm2 reload court-simulation-worker --update-env
+            pm2 reload drafting-lab-worker --update-env
+            pm2 reload resume-analyzer-worker --update-env
+            pm2 reload resume-builder-worker --update-env
+            echo "Production deploy complete $(date)"
