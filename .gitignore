@@ -1,0 +1,22 @@
+# Environment variables — NEVER commit these
+backend/.env
+frontend/.env
+.env
+
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Build output
+frontend/dist/
+frontend/build/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+*.pem
+*.key
+
+# Bulk-import script output — plaintext student passwords, never commit
+backend/scripts/output/
