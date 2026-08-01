@@ -26,8 +26,9 @@ const msFromExpiry = (expiry) => {
   return value * 1000; // assume seconds
 };
 
-const ACCESS_COOKIE_OPTS = { httpOnly: true, secure: true, sameSite: 'strict', maxAge: msFromExpiry(process.env.JWT_ACCESS_EXPIRES) };
-const REFRESH_COOKIE_OPTS = { httpOnly: true, secure: true, sameSite: 'strict', maxAge: msFromExpiry(process.env.JWT_REFRESH_EXPIRES) };
+const isProduction = process.env.NODE_ENV === 'production' && (process.env.FRONTEND_URL || '').startsWith('https:');
+const ACCESS_COOKIE_OPTS = { httpOnly: true, secure: isProduction, sameSite: isProduction ? 'strict' : 'lax', maxAge: msFromExpiry(process.env.JWT_ACCESS_EXPIRES || '15m') };
+const REFRESH_COOKIE_OPTS = { httpOnly: true, secure: isProduction, sameSite: isProduction ? 'strict' : 'lax', maxAge: msFromExpiry(process.env.JWT_REFRESH_EXPIRES || '7d') };
 
 const signAccessToken = (payload) => jwt.sign(payload, process.env.JWT_ACCESS_SECRET, { expiresIn: process.env.JWT_ACCESS_EXPIRES });
 const signRefreshToken = (payload) => jwt.sign(payload, process.env.JWT_REFRESH_SECRET, { expiresIn: process.env.JWT_REFRESH_EXPIRES });

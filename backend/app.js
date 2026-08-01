@@ -46,7 +46,24 @@ const app = express();
 // decisions-log.md.
 app.set('trust proxy', 1);
 
-app.use(cors({ origin: process.env.FRONTEND_URL, credentials: true }));
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'https://jarvis-ai-staging-frontend.s3.ap-south-1.amazonaws.com',
+  'http://jarvis-ai-staging-frontend.s3-website.ap-south-1.amazonaws.com',
+  'http://43.205.232.96',
+  'http://localhost:5173',
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin) || origin.includes('amazonaws.com')) {
+      callback(null, true);
+    } else {
+      callback(null, true);
+    }
+  },
+  credentials: true,
+}));
 app.use(express.json({ limit: '10kb' }));
 app.use(cookieParser());
 app.use(rateLimitMiddleware); // Level 1: 100 req/min per IP
