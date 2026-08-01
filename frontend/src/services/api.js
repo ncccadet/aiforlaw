@@ -13,6 +13,16 @@ const api = axios.create({
   withCredentials: true, // Critical: sends httpOnly cookie on every request
 });
 
+api.interceptors.request.use((config) => {
+  try {
+    const token = sessionStorage.getItem('accessToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  } catch {}
+  return config;
+});
+
 /**
  * SILENT SESSION REFRESH
  * ----------------------

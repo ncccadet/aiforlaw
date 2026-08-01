@@ -74,7 +74,7 @@ const login = async (req, res, next) => {
     res
       .cookie('accessToken', accessToken, ACCESS_COOKIE_OPTS)
       .cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTS)
-      .json({ user: { user_id: user.user_id, email: user.email, college_id: user.college_id, role: user.role } });
+      .json({ accessToken, user: { user_id: user.user_id, email: user.email, college_id: user.college_id, role: user.role } });
   } catch (err) { next(err); }
 };
 

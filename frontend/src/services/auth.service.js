@@ -6,10 +6,18 @@
 import api from './api';
 
 export const login = (email, password) =>
-  api.post('/api/auth/login', { email, password }).then((res) => res.data);
+  api.post('/api/auth/login', { email, password }).then((res) => {
+    if (res.data?.accessToken) {
+      try { sessionStorage.setItem('accessToken', res.data.accessToken); } catch {}
+    }
+    return res.data;
+  });
 
 export const logout = () =>
-  api.post('/api/auth/logout').then((res) => res.data);
+  api.post('/api/auth/logout').then((res) => {
+    try { sessionStorage.removeItem('accessToken'); } catch {}
+    return res.data;
+  });
 
 export const refresh = () =>
   api.post('/api/auth/refresh').then((res) => res.data);
