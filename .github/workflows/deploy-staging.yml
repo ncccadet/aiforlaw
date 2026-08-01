@@ -19,9 +19,11 @@ jobs:
           host: ${{ secrets.STAGING_EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: GITHUB_REF_NAME
           script: |
             cd /home/ubuntu/voxera-law
-            git pull origin staging || { echo "DEPLOY ABORTED: git pull failed. Server has uncommitted local changes that must be resolved manually before the next deploy."; exit 1; }
+            git fetch origin
+            git reset --hard origin/${GITHUB_REF_NAME:-main} || { echo "DEPLOY ABORTED: git reset failed."; exit 1; }
             cd backend  && npm install --production
             cd ../frontend && npm install && npm run build
             # Same two-pass caching as production — see deploy-production.yml

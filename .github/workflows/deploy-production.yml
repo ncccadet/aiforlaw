@@ -24,7 +24,8 @@ jobs:
           script: |
             set -e
             cd /home/ubuntu/voxera-law
-            git pull origin main || { echo "DEPLOY ABORTED: git pull failed. Server has uncommitted local changes that must be resolved manually before the next deploy."; exit 1; }
+            git fetch origin
+            git reset --hard origin/main || { echo "DEPLOY ABORTED: git fetch/reset failed."; exit 1; }
 
             export AWS_ACCESS_KEY_ID="$PROD_AWS_ACCESS_KEY_ID"
             export AWS_SECRET_ACCESS_KEY="$PROD_AWS_SECRET_ACCESS_KEY"
