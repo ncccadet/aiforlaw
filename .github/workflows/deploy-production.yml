@@ -92,7 +92,9 @@ jobs:
             aws s3 cp dist/index.html s3://voxera-law-frontend-production/index.html \
               --cache-control "no-cache,no-store,must-revalidate" \
               --content-type "text/html"
-            aws cloudfront create-invalidation --distribution-id ${{ secrets.PROD_CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
+            if [ -n "${{ secrets.PROD_CLOUDFRONT_DISTRIBUTION_ID }}" ]; then
+              aws cloudfront create-invalidation --distribution-id ${{ secrets.PROD_CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*" || true
+            fi
             pm2 reload voxera-backend --update-env
             pm2 reload otp-worker --update-env
             pm2 reload ai-interviewer-worker --update-env
