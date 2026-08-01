@@ -44,7 +44,7 @@ export default function LoginPage() {
   return (
     <div style={styles.page}>
       <form style={styles.card} onSubmit={handleSubmit}>
-        <h1 style={styles.title}>Voxera For Law</h1>
+        <h1 style={styles.title}>Law AI</h1>
         <p style={styles.subtitle}>Sign in to continue</p>
 
         {error && <div style={styles.error}>{error}</div>}

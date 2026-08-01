@@ -117,7 +117,7 @@ function buildMessage({ name, email, password }) {
 
   const text = `${greeting}
 
-Your provisional access to Voxera For Law is ready. This is a preview for
+Your provisional access to Law AI is ready. This is a preview for
 your feedback — please use it, then tell us what worked and what did not.
 
   Website:  ${APP_URL}
@@ -140,13 +140,13 @@ Some features have a small daily limit, which is normal and not a fault.
 If you cannot log in, or anything behaves oddly, reply to this email and tell
 us what you were doing when it happened. That is exactly the feedback we need.
 
-Voxera For Law
+Law AI
 ${SUPPORT_EMAIL}
 `;
 
   const html = `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.6;color:#111;max-width:560px">
   <p>${escapeHtml(greeting)}</p>
-  <p>Your provisional access to <strong>Voxera For Law</strong> is ready. This is a preview for your feedback — please use it, then tell us what worked and what did not.</p>
+  <p>Your provisional access to <strong>Law AI</strong> is ready. This is a preview for your feedback — please use it, then tell us what worked and what did not.</p>
   <table cellpadding="6" style="background:#f5f5f5;border-radius:8px;margin:18px 0">
     <tr><td>Website</td><td><a href="${APP_URL}">${APP_URL}</a></td></tr>
     <tr><td>Email</td><td><strong>${escapeHtml(email)}</strong></td></tr>
@@ -163,10 +163,10 @@ ${SUPPORT_EMAIL}
   </ul>
   <p>Some features have a small daily limit. That is normal, not a fault.</p>
   <p>If you cannot log in, or anything behaves oddly, just reply to this email and tell us what you were doing when it happened. That is exactly the feedback we need.</p>
-  <p style="color:#555">Voxera For Law<br><a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a></p>
+  <p style="color:#555">Law AI<br><a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a></p>
 </div>`;
 
-  return { subject: 'Your Voxera For Law access', text, html };
+  return { subject: 'Your Law AI access', text, html };
 }
 
 async function main() {
@@ -240,7 +240,7 @@ async function main() {
     const msg = buildMessage({ name: names.get(email), email, password });
     try {
       await transporter.sendMail({
-        from: `"Voxera For Law" <${user}>`,
+        from: `"Law AI" <${user}>`,
         to: email,
         replyTo: SUPPORT_EMAIL,
         subject: msg.subject,

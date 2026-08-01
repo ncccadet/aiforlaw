@@ -49,8 +49,8 @@ const welcomeWorker = new Worker('send-welcome-email', async (job) => {
   const { email, password } = job.data;
   await sendEmail({
     to: email,
-    subject: 'Your Voxera For Law account is ready',
-    body: `Welcome to Voxera For Law.\n\nYour login email: ${email}\nYour temporary password: ${password}\n\nPlease log in and change your password as soon as possible.`
+    subject: 'Your Law AI account is ready',
+    body: `Welcome to Law AI.\n\nYour login email: ${email}\nYour temporary password: ${password}\n\nPlease log in and change your password as soon as possible.`
   });
 }, {
   connection,

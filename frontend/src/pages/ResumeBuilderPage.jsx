@@ -291,7 +291,7 @@ export default function ResumeBuilderPage() {
     <div style={styles.page}>
       <style>{css}</style>
       <div style={styles.container}>
-        <p style={styles.eyebrow}>Voxera For Law</p>
+        <p style={styles.eyebrow}>Law AI</p>
         <h1 style={styles.title}>Resume Builder</h1>
         <div style={styles.titleRule} />
         <p style={styles.subtitle}>Fill in your details — you can build and rebuild your resume as many times as you like.</p>

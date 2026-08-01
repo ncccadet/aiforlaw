@@ -1,5 +1,5 @@
 // =====================================================================
-// DashboardPage.jsx — Voxera For Law student dashboard
+// DashboardPage.jsx — Law AI student dashboard
 // Theme  : charcoal / graphite / bone-grey, serif-led editorial look
 // Fonts  : "Cormorant Garamond" (display) + "Lora" (body) via Google
 //          Fonts, with Georgia/serif fallbacks if the CDN is blocked.
@@ -497,7 +497,7 @@ export default function DashboardPage() {
         {/* top bar */}
         <header className="vfl-topbar">
           <div className="vfl-wordmark">
-            Voxera <em>for Law</em>
+            Law <em>AI</em>
           </div>
           <div className="vfl-college">
             {status === 'ready' ? student.college : ''}
@@ -627,7 +627,7 @@ export default function DashboardPage() {
           <span>
             <em>For educational purposes only. Verify with a qualified advocate.</em>
           </span>
-          <span>Voxera For Law · AIFORTECH</span>
+          <span>Law AI · AIFORTECH</span>
         </footer>
       </div>
     </div>

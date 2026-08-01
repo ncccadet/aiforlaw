@@ -1,4 +1,4 @@
-# Voxera For Law — Project Scaffold
+# Law AI — Project Scaffold
 
 350 Students · 8 Features · 3 Environments · 30-Day Launch
 

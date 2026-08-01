@@ -174,7 +174,7 @@ function table(doc, columns, rows, { emptyText = 'No activity recorded.' } = {})
 
 /** Title block at the top of page 1. */
 function titleBlock(doc, title, subtitle) {
-  doc.font(H_FONT).fontSize(20).fillColor(INK).text('Voxera For Law', MARGIN, MARGIN);
+  doc.font(H_FONT).fontSize(20).fillColor(INK).text('Law AI', MARGIN, MARGIN);
   doc.font(B_FONT).fontSize(11).fillColor(MUTED).text(title, MARGIN, doc.y + 2);
   doc.font(B_FONT).fontSize(9).fillColor(MUTED).text(subtitle, MARGIN, doc.y + 2);
   const y = doc.y + 8;
@@ -323,7 +323,7 @@ function buildDailyPdf(metrics, { live = false } = {}) {
     { emptyText: 'No errors logged today.' }
   );
 
-  paginate(doc, 'Voxera For Law — internal report. Not for distribution.');
+  paginate(doc, 'Law AI — internal report. Not for distribution.');
   doc.end();
   return doc;
 }
@@ -400,7 +400,7 @@ function buildMonthlyPdf(m, { inProgress = false } = {}) {
     ])
   );
 
-  paginate(doc, 'Voxera For Law — internal report. Not for distribution.');
+  paginate(doc, 'Law AI — internal report. Not for distribution.');
   doc.end();
   return doc;
 }
