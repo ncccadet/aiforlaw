@@ -30,7 +30,7 @@ jobs:
               source .env
               set +a
             fi
-            cd ../frontend && npm install && npm run build
+            cd ../frontend && echo "VITE_API_URL=http://43.205.232.96:4000" > .env.production && npm install && npm run build
             aws s3 sync dist/ s3://${{ secrets.S3_BUCKET_FRONTEND_STAGING || 'jarvis-ai-staging-frontend' }}/ --delete \
               --exclude "index.html" \
               --cache-control "public,max-age=31536000,immutable"
