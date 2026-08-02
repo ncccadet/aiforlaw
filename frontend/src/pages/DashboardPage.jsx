@@ -49,7 +49,7 @@ const FEATURE_ORDER = Object.keys(FEATURE_META);
  * students hit a broken feature. Remove the key here once the upload works —
  * no other change is needed, the feature itself is untouched.
  */
-const FORCED_COMING_SOON = new Set(['resume-analyzer']);
+const FORCED_COMING_SOON = new Set([]);
 
 // Greeting keyed to IST hours — the whole cohort is in one timezone.
 function greetingForNow() {

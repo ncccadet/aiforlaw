@@ -188,6 +188,20 @@ app.use('/api/law-news',         lawNewsRoutes);
 
 app.use(errorHandler); // MUST be last
 
+// Start background BullMQ workers in app.js so every deployment automatically runs all feature workers
+if (process.env.NODE_ENV !== 'test') {
+  try {
+    require('./workers/courtSimulation.worker');
+    require('./workers/aiInterviewer.worker');
+    require('./workers/draftingLab.worker');
+    require('./workers/resumeAnalyzer.worker');
+    require('./workers/resumeBuilder.worker');
+    console.log('[app] Background workers initialized successfully');
+  } catch (err) {
+    console.error('[app] Worker initialization note:', err.message);
+  }
+}
+
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`Voxera backend on port ${PORT}`));
 module.exports = app;
