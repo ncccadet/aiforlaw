@@ -108,13 +108,13 @@ const loadOwnSession = async (id, user_id, college_id) => {
 // whole interview over an optional field.
 const loadResumeContext = async (resume_doc_id, user_id, college_id) => {
   if (!resume_doc_id) return null;
-  // documents is RLS-protected — college_id is req.user.college_id.
+  const cid = college_id || null;
   const { rows } = await queryAsCollege(
-    college_id,
+    cid,
     `SELECT analysis_json FROM documents
-      WHERE doc_id=$1 AND user_id=$2 AND college_id=$3
+      WHERE doc_id=$1 AND user_id=$2 AND (college_id IS NOT DISTINCT FROM $3)
         AND feature_name='resume_analyzer' AND status='complete'`,
-    [resume_doc_id, user_id, college_id]
+    [resume_doc_id, user_id, cid]
   );
   const analysis = rows[0]?.analysis_json;
   if (!analysis || analysis.isResume === false) return null;
@@ -216,6 +216,7 @@ Return ONLY valid JSON with no markdown fences:
 const startInterview = async (req, res, next) => {
   try {
     const { user_id, college_id } = req.user;
+    const cid = college_id || null;
     const difficulty = String(req.body.difficulty || '');
     const role = ROLES.includes(req.body.role) ? req.body.role : ROLES[0];
     const resume_doc_id = req.body.resume_doc_id || null;
@@ -224,19 +225,19 @@ const startInterview = async (req, res, next) => {
       return res.status(400).json({ error: 'difficulty must be easy | medium | hard' });
     }
 
-    const resumeContext = await loadResumeContext(resume_doc_id, user_id, college_id);
+    const resumeContext = await loadResumeContext(resume_doc_id, user_id, cid);
 
     // college_id from req.user — RLS-scoped insert into sessions.
     const { rows } = await queryAsCollege(
-      college_id,
+      cid,
       `INSERT INTO sessions (user_id, college_id, feature_name, session_type, difficulty, filters, resume_doc_id, status)
        VALUES ($1,$2,'ai_interviewer','interview',$3,$4,$5,'preparing') RETURNING session_id`,
-      [user_id, college_id, difficulty, JSON.stringify({ role }), resumeContext ? resume_doc_id : null]
+      [user_id, cid, difficulty, JSON.stringify({ role }), resumeContext ? resume_doc_id : null]
     );
     const sessionId = rows[0].session_id;
 
     // Fast direct question generation
-    const questions = await generateQuestionsDirectly(sessionId, difficulty, role, resumeContext, user_id, college_id);
+    const questions = await generateQuestionsDirectly(sessionId, difficulty, role, resumeContext, user_id, cid);
 
     res.status(200).json({
       sessionId,

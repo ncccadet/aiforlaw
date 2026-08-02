@@ -378,6 +378,7 @@ Return ONLY valid JSON with no markdown fences:
 const startCaseStudy = async (req, res, next) => {
   try {
     const { user_id, college_id } = req.user;
+    const cid = college_id || null;
     const template_type = String(req.body.template_type || '');
     if (!DRAFT_TYPES[template_type]) {
       return res.status(400).json({ error: 'Please choose a valid draft type.' });
@@ -385,15 +386,15 @@ const startCaseStudy = async (req, res, next) => {
 
     // college_id from req.user — RLS-scoped insert into sessions.
     const { rows } = await queryAsCollege(
-      college_id,
+      cid,
       `INSERT INTO sessions (user_id, college_id, feature_name, session_type, filters, status)
        VALUES ($1,$2,'drafting_lab','case_study',$3,'preparing') RETURNING session_id`,
-      [user_id, college_id, JSON.stringify({ template_type })]
+      [user_id, cid, JSON.stringify({ template_type })]
     );
     const sessionId = rows[0].session_id;
 
     // Fast direct case study generation
-    const finalFilters = await generateCaseStudyDirectly(sessionId, template_type, DRAFT_TYPES[template_type].label, user_id, college_id);
+    const finalFilters = await generateCaseStudyDirectly(sessionId, template_type, DRAFT_TYPES[template_type].label, user_id, cid);
 
     res.status(200).json({
       docId: sessionId,

@@ -87,10 +87,11 @@ const logUsage = (user_id, college_id, model, tin, tout) =>
 // sessions is RLS-protected — college_id here always comes from req.user
 // (verified JWT via auth.middleware.js), never from the request body/params.
 const loadOwnSession = async (id, user_id, college_id) => {
+  const cid = college_id || null;
   const { rows } = await queryAsCollege(
-    college_id,
-    `SELECT * FROM sessions WHERE session_id=$1 AND user_id=$2 AND college_id=$3 AND feature_name='court_simulation'`,
-    [id, user_id, college_id]
+    cid,
+    `SELECT * FROM sessions WHERE session_id=$1 AND user_id=$2 AND (college_id IS NOT DISTINCT FROM $3) AND feature_name='court_simulation'`,
+    [id, user_id, cid]
   );
   return rows[0] || null;
 };
@@ -194,6 +195,7 @@ Return ONLY valid JSON with no markdown fences:
 const startSession = async (req, res, next) => {
   try {
     const { user_id, college_id } = req.user;
+    const cid = college_id || null;
     const fieldOfLaw = String(req.body.fieldOfLaw || req.body.caseType || '');
     const def = FIELDS[fieldOfLaw];
     if (!def) return res.status(400).json({ error: 'Choose a valid field of law.' });
@@ -205,15 +207,15 @@ const startSession = async (req, res, next) => {
     const filters = { fieldOfLaw, fieldLabel: def.label, position, studentName };
     // college_id from req.user (verified JWT) — RLS-scoped insert into sessions.
     const { rows } = await queryAsCollege(
-      college_id,
+      cid,
       `INSERT INTO sessions (user_id, college_id, feature_name, session_type, difficulty, filters, turns, turn_count, status)
        VALUES ($1,$2,'court_simulation',$3,$4,$5,'[]'::jsonb,0,'preparing') RETURNING session_id`,
-      [user_id, college_id, fieldOfLaw, level, JSON.stringify(filters)]
+      [user_id, cid, fieldOfLaw, level, JSON.stringify(filters)]
     );
     const sessionId = rows[0].session_id;
 
     // Fast direct case generation
-    const finalFilters = await generateCaseDirectly(sessionId, def.label, position, level, studentName, user_id, college_id, filters);
+    const finalFilters = await generateCaseDirectly(sessionId, def.label, position, level, studentName, user_id, cid, filters);
 
     res.status(200).json({
       sessionId,

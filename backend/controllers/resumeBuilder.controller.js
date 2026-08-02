@@ -142,30 +142,29 @@ const normalizeDraft = (body) => {
 const saveDraft = async (req, res, next) => {
   try {
     const { user_id, college_id } = req.user;
+    const cid = college_id || null;
     const draft = normalizeDraft(req.body);
     const completeness = calculateCompleteness(draft);
 
     const { rows: existing } = await queryAsCollege(
-      college_id,
-      'SELECT doc_id FROM documents WHERE user_id = $1 AND college_id = $2 AND feature_name = $3 LIMIT 1',
-      [user_id, college_id, DRAFT_FEATURE]
+      cid,
+      'SELECT doc_id FROM documents WHERE user_id = $1 AND (college_id IS NOT DISTINCT FROM $2) AND feature_name = $3 LIMIT 1',
+      [user_id, cid, DRAFT_FEATURE]
     );
 
     const analysisJson = { ...draft, completeness };
 
     if (existing.length > 0) {
-      await queryAsCollege(college_id, 'UPDATE documents SET analysis_json = $1 WHERE doc_id = $2', [analysisJson, existing[0].doc_id]);
+      await queryAsCollege(cid, 'UPDATE documents SET analysis_json = $1 WHERE doc_id = $2', [analysisJson, existing[0].doc_id]);
     } else {
       await queryAsCollege(
-        college_id,
+        cid,
         `INSERT INTO documents (user_id, college_id, feature_name, template_type, s3_key, analysis_json)
          VALUES ($1, $2, $3, 'law_resume_v1', '', $4)`,
-        [user_id, college_id, DRAFT_FEATURE, analysisJson]
+        [user_id, cid, DRAFT_FEATURE, analysisJson]
       );
     }
 
-    // canBuild lives INSIDE `completeness` — must match GET /draft's shape exactly
-    // (that endpoint just re-serves the same stored object).
     res.json({
       completeness: {
         total: completeness.total,
@@ -184,10 +183,11 @@ const saveDraft = async (req, res, next) => {
 const getDraft = async (req, res, next) => {
   try {
     const { user_id, college_id } = req.user;
+    const cid = college_id || null;
     const { rows } = await queryAsCollege(
-      college_id,
-      'SELECT analysis_json FROM documents WHERE user_id = $1 AND college_id = $2 AND feature_name = $3 LIMIT 1',
-      [user_id, college_id, DRAFT_FEATURE]
+      cid,
+      'SELECT analysis_json FROM documents WHERE user_id = $1 AND (college_id IS NOT DISTINCT FROM $2) AND feature_name = $3 LIMIT 1',
+      [user_id, cid, DRAFT_FEATURE]
     );
 
     if (rows.length === 0) return res.json({ draft: null, completeness: calculateCompleteness(null) });
@@ -208,9 +208,8 @@ const getTemplates = async (_req, res, next) => {
 const buildResume = async (req, res, next) => {
   try {
     const { user_id, college_id } = req.user;
+    const cid = college_id || null;
 
-    // Student picks a template at Build time (not up front) — same saved
-    // draft can be rendered into any template without re-entering data.
     const requestedTemplateId = req.body?.template_id;
     if (requestedTemplateId !== undefined && !TEMPLATE_IDS.includes(requestedTemplateId)) {
       return res.status(400).json({ error: 'Unknown template_id.', validTemplateIds: TEMPLATE_IDS });
@@ -218,9 +217,9 @@ const buildResume = async (req, res, next) => {
     const templateId = requestedTemplateId || DEFAULT_TEMPLATE_ID;
 
     const { rows } = await queryAsCollege(
-      college_id,
-      'SELECT analysis_json FROM documents WHERE user_id = $1 AND college_id = $2 AND feature_name = $3 LIMIT 1',
-      [user_id, college_id, DRAFT_FEATURE]
+      cid,
+      'SELECT analysis_json FROM documents WHERE user_id = $1 AND (college_id IS NOT DISTINCT FROM $2) AND feature_name = $3 LIMIT 1',
+      [user_id, cid, DRAFT_FEATURE]
     );
 
     if (rows.length === 0) {
@@ -228,26 +227,16 @@ const buildResume = async (req, res, next) => {
     }
 
     const { completeness, ...draft } = rows[0].analysis_json;
-    const freshCompleteness = calculateCompleteness(draft); // never trust a stale stored value — recompute now
+    const freshCompleteness = calculateCompleteness(draft);
 
     if (!freshCompleteness.canBuild) {
       const missing = COMPULSORY_SECTIONS.filter((s) => freshCompleteness[s] < WEIGHTS[s]);
       return res.status(400).json({ error: 'Compulsory sections incomplete.', missing });
     }
 
-    // ── Duplicate-build guard ────────────────────────────────────────────────
-    // Independent of the monthly cap: a fast double-click (Stupid Path) or a
-    // stuck frontend firing /build several times would otherwise enqueue
-    // several distinct Gemini-polish + PDF-render jobs for the same student —
-    // real cost and CPU for zero benefit (only the last result is ever shown),
-    // and would burn through the monthly cap for no reason. Each jobId is a
-    // fresh UUID, so BullMQ can't dedupe these on its own. Before enqueuing we
-    // scan this student's own not-yet-finished jobs; if one is already in
-    // flight we return it (202) so the frontend simply keeps polling the build
-    // that's already running instead of starting another.
     const pendingJobs = await resumeBuilderQueue.getJobs(['active', 'waiting', 'delayed', 'paused']);
     const existing = pendingJobs.find(
-      (j) => j?.data?.user_id === user_id && j?.data?.college_id === college_id
+      (j) => j?.data?.user_id === user_id && j?.data?.college_id === cid
     );
     if (existing) {
       return res.status(202).json({ buildId: existing.id, status: 'processing' });
@@ -256,14 +245,14 @@ const buildResume = async (req, res, next) => {
     const buildId = crypto.randomUUID();
 
     const { processJob: processBuildJob } = require('../workers/resumeBuilder.worker');
-    processBuildJob({ data: { doc_id: buildId, user_id, college_id, draft, template_id: templateId }, id: buildId }).catch((e) => {
+    processBuildJob({ data: { doc_id: buildId, user_id, college_id: cid, draft, template_id: templateId }, id: buildId }).catch((e) => {
       console.error('[resumeBuilder] direct build job failed:', e.message);
     });
 
     try {
       await resumeBuilderQueue.add(
         'build',
-        { doc_id: buildId, user_id, college_id, draft, template_id: templateId },
+        { doc_id: buildId, user_id, college_id: cid, draft, template_id: templateId },
         { jobId: buildId }
       );
     } catch (qErr) {
@@ -426,18 +415,19 @@ const getBuildResult = async (req, res, next) => {
 const getResume = async (req, res, next) => {
   try {
     const { user_id, college_id } = req.user;
+    const cid = college_id || null;
     const { rows } = await queryAsCollege(
-      college_id,
+      cid,
       `SELECT s3_key FROM documents
-       WHERE user_id = $1 AND college_id = $2 AND feature_name = $3
+       WHERE user_id = $1 AND (college_id IS NOT DISTINCT FROM $2) AND feature_name = $3
        ORDER BY created_at DESC LIMIT 1`,
-      [user_id, college_id, BUILD_FEATURE]
+      [user_id, cid, BUILD_FEATURE]
     );
 
     if (rows.length === 0) return res.status(404).json({ error: 'No resume built yet.' });
 
     const downloadUrl = s3.getSignedUrl('getObject', {
-      Bucket: process.env.S3_BUCKET_FILES,
+      Bucket: process.env.S3_BUCKET_FILES || 'aiforlaw-files-prod',
       Key: rows[0].s3_key,
       Expires: 300,
     });
@@ -445,27 +435,18 @@ const getResume = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-// ── GET /history — a student's last 5 builds, each with its own download URL
-// ─────────────────────────────────────────────────────────────────────────
-// Every /build enqueues a fresh doc_id and INSERTs a new `documents` row
-// (never UPDATEs/overwrites one) — so the full history of every resume a
-// student has ever built already exists permanently in S3 and this table;
-// nothing is lost if the student clears their own laptop, since the PDF was
-// never stored there in the first place. This endpoint just exposes the
-// last 5 of that history that already existed. Added 2026-07-22 (founder
-// request) — getResume()/'/download' above is unchanged and still serves
-// the single most-recent build for anything that only needs "the latest".
 const HISTORY_LIMIT = 5;
 
 const getResumeHistory = async (req, res, next) => {
   try {
     const { user_id, college_id } = req.user;
+    const cid = college_id || null;
     const { rows } = await queryAsCollege(
-      college_id,
+      cid,
       `SELECT doc_id, template_type, s3_key, created_at FROM documents
-       WHERE user_id = $1 AND college_id = $2 AND feature_name = $3
+       WHERE user_id = $1 AND (college_id IS NOT DISTINCT FROM $2) AND feature_name = $3
        ORDER BY created_at DESC LIMIT $4`,
-      [user_id, college_id, BUILD_FEATURE, HISTORY_LIMIT]
+      [user_id, cid, BUILD_FEATURE, HISTORY_LIMIT]
     );
 
     const history = rows.map((row) => ({
@@ -474,7 +455,7 @@ const getResumeHistory = async (req, res, next) => {
       templateLabel: TEMPLATE_LABELS[row.template_type] || row.template_type,
       createdAt: row.created_at,
       downloadUrl: s3.getSignedUrl('getObject', {
-        Bucket: process.env.S3_BUCKET_FILES,
+        Bucket: process.env.S3_BUCKET_FILES || 'aiforlaw-files-prod',
         Key: row.s3_key,
         Expires: 300,
       }),
