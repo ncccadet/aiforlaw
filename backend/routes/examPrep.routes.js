@@ -12,7 +12,7 @@
  * Monthly (not daily) is founder-dictated, 2026-07-28: students revise in
  * bursts before an exam, not evenly across the month.
  *
- * SPLIT LIMITS — 15 AIBE + 15 SPPU, two separate Redis counters, replacing the
+ * SPLIT LIMITS — 25 AIBE + 25 SPPU, two separate Redis counters, replacing the
  * shared 30 (founder decision, 2026-07-28). Two reasons it is a split and not
  * just a smaller shared number:
  *   1. Cost. An AIBE paper costs Rs 1.43 and an SPPU cycle Rs 0.55. Under a

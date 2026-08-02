@@ -45,7 +45,7 @@ export default function DraftingLabPage() {
             <h1 className="dl-title">Drafting Lab</h1>
             <p className="dl-subtitle">Learn real formats, then draft and get scored like a junior under a senior advocate.</p>
           </div>
-          <span className="dl-badge">Practice: 3 exercises / day</span>
+          <span className="dl-badge">Practice: 50 exercises / month</span>
         </header>
 
         <div className="dl-tabs">
