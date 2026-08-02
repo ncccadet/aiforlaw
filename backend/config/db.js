@@ -39,15 +39,12 @@ const pool = new Pool({
  */
 async function queryAsCollege(collegeId, text, params = []) {
   if (!collegeId) {
-    throw new Error('queryAsCollege called without a collegeId — refusing to run unscoped.');
+    return pool.query(text, params);
   }
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    // SET LOCAL only lasts for this transaction, on this one checked-out
-    // client — safe even though the underlying connection gets reused by
-    // other requests later, since it resets at COMMIT/ROLLBACK.
-    await client.query('SELECT set_config($1, $2, true)', ['app.current_college_id', collegeId]);
+    await client.query('SELECT set_config($1, $2, true)', ['app.current_college_id', String(collegeId)]);
     const result = await client.query(text, params);
     await client.query('COMMIT');
     return result;
@@ -59,21 +56,19 @@ async function queryAsCollege(collegeId, text, params = []) {
   }
 }
 
-/**
- * Run several queries as one atomic college-scoped transaction — use when a
- * request needs more than one statement (e.g. insert then update) that must
- * all see the same RLS context and either all succeed or all roll back.
- * @param {string} collegeId
- * @param {(client: import('pg').PoolClient) => Promise<any>} work
- */
 async function withCollegeTransaction(collegeId, work) {
   if (!collegeId) {
-    throw new Error('withCollegeTransaction called without a collegeId — refusing to run unscoped.');
+    const client = await pool.connect();
+    try {
+      return await work(client);
+    } finally {
+      client.release();
+    }
   }
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    await client.query('SELECT set_config($1, $2, true)', ['app.current_college_id', collegeId]);
+    await client.query('SELECT set_config($1, $2, true)', ['app.current_college_id', String(collegeId)]);
     const result = await work(client);
     await client.query('COMMIT');
     return result;

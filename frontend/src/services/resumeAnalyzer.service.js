@@ -8,7 +8,7 @@ import api from './api';
 
 // Client-side guard rails (the worker re-validates everything server-side).
 export const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
-export const MIN_FILE_BYTES = 10 * 1024;       // 10 KB
+export const MIN_FILE_BYTES = 100;             // 100 Bytes
 
 /**
  * Validate the chosen file before we even ask for an upload URL.
@@ -20,7 +20,7 @@ export const validateFile = (file) => {
     file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
   if (!isPdf) return 'Only PDF résumés are accepted.';
   if (file.size > MAX_FILE_BYTES) return 'That file is larger than 5 MB. Please upload a smaller PDF.';
-  if (file.size < MIN_FILE_BYTES) return 'That file looks too small to be a résumé.';
+  if (file.size < MIN_FILE_BYTES) return 'That file looks empty.';
   return null;
 };
 
