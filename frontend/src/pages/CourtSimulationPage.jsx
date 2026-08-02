@@ -454,16 +454,11 @@ export default function CourtSimulationPage() {
     setFieldOfLaw(''); setPositions([]); setStudentName(''); setLevel('medium');
   };
 
-  // Quit — founder feedback: "most of the times, people seem that they want
-  // to quit it." Distinct from "Rest my case": resting closes your arguments
-  // and asks the bench for a judgment + scored feedback (a costly AI call),
-  // whereas quitting walks out of the hearing immediately with no judgment.
-  // Confirmed first, because it is not undoable — the session is abandoned.
-  // We deliberately do NOT call finishSession() here; the row simply stays
-  // unfinished, and no further AI tokens are spent on a student who left.
-  const onQuit = () => {
-    if (!window.confirm('Leave this hearing? You will not receive a judgment or feedback for this case.')) return;
-    restart();
+  // Quit — generates a summary/judgment based on turns argued so far.
+  // Even if the student leaves early, they still get performance feedback.
+  const onQuit = async () => {
+    if (!window.confirm('Leave this hearing? Your performance so far will be evaluated and a summary will be generated.')) return;
+    await onFinish();
   };
 
   return (

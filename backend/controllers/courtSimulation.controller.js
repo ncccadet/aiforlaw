@@ -257,7 +257,8 @@ const getSession = async (req, res, next) => {
 const takeTurn = async (req, res, next) => {
   try {
     const { user_id, college_id } = req.user;
-    const s = await loadOwnSession(req.body.session_id, user_id, college_id);
+    const cid = college_id || null;
+    const s = await loadOwnSession(req.body.session_id, user_id, cid);
     if (!s) return res.status(404).json({ error: 'Session not found.' });
     if (s.status !== 'active') return res.status(409).json({ error: 'This simulation is not active.' });
 
@@ -308,19 +309,18 @@ Return STRICT JSON only: { "opposition": "...", "judge": "...", "concluded": <bo
       tin = out.tokensIn; tout = out.tokensOut; model = out.model;
       parsed = parseJson(out.text);
     } catch (e) {
-      if (tin || tout) logUsage(user_id, college_id, model, tin, tout);
+      if (tin || tout) logUsage(user_id, cid, model, tin, tout);
       return res.status(502).json({ error: 'The court could not respond. Please try again.' });
     }
-    logUsage(user_id, college_id, model, tin, tout);
+    logUsage(user_id, cid, model, tin, tout);
 
     const opposition = clampWords(parsed.opposition, OPPOSITION_MAX_WORDS);
     const judge = clampWords(parsed.judge, JUDGE_MAX_WORDS);
     const concluded = forcedConclude || parsed.concluded === true;
 
     turns.push({ student: statement, opposition, judge, voiceLevel, durationSec, wordCount });
-    // college_id already verified above via loadOwnSession's own college_id filter.
     await queryAsCollege(
-      college_id,
+      cid,
       `UPDATE sessions SET turns=$2, turn_count=$3 WHERE session_id=$1`,
       [s.session_id, JSON.stringify(turns), turns.length]
     );
@@ -333,18 +333,22 @@ Return STRICT JSON only: { "opposition": "...", "judge": "...", "concluded": <bo
 const finishSession = async (req, res, next) => {
   try {
     const { user_id, college_id } = req.user;
-    const s = await loadOwnSession(req.body.session_id, user_id, college_id);
+    const cid = college_id || null;
+    const s = await loadOwnSession(req.body.session_id, user_id, cid);
     if (!s) return res.status(404).json({ error: 'Session not found.' });
     if (s.status === 'complete' && s.summary) return res.json({ status: 'complete', result: JSON.parse(s.summary) });
     if (s.status !== 'active') return res.status(409).json({ error: 'This simulation is not active.' });
 
     const f = s.filters || {};
     const turns = s.turns || [];
-    if (turns.length === 0) return res.status(400).json({ error: 'Argue at least one turn before finishing.' });
 
-    const transcript = turns.map((t, i) =>
-      `Turn ${i + 1}\nStudent (${f.position}): ${t.student}\nOpposition: ${t.opposition}\nJudge: ${t.judge}`
-    ).join('\n\n');
+    // Build transcript — if the student quit before making a single statement,
+    // tell the AI so it can give appropriate early-exit feedback instead of hallucinating.
+    const transcript = turns.length > 0
+      ? turns.map((t, i) =>
+          `Turn ${i + 1}\nStudent (${f.position}): ${t.student}\nOpposition: ${t.opposition}\nJudge: ${t.judge}`
+        ).join('\n\n')
+      : `(The student left the hearing before making any statement. Evaluate accordingly — give brief feedback about preparation and what the student should work on before their next attempt.)`;
     const prompt =
 `You are the presiding judge AND a senior advocate evaluating a law student's performance in a mock
 ${f.fieldLabel} matter. The student argued for the ${f.position}. Case brief: ${f.brief}
@@ -378,10 +382,10 @@ never invent facts; up to 5 items each in strengths/weaknesses/improvements; kee
       tin = out.tokensIn; tout = out.tokensOut; model = out.model;
       parsed = parseJson(out.text);
     } catch (e) {
-      if (tin || tout) logUsage(user_id, college_id, model, tin, tout);
+      if (tin || tout) logUsage(user_id, cid, model, tin, tout);
       return res.status(502).json({ error: 'Could not generate your judgment and feedback. Please try again.' });
     }
-    logUsage(user_id, college_id, model, tin, tout);
+    logUsage(user_id, cid, model, tin, tout);
 
     const clampScore = (n) => Math.max(0, Math.min(100, Math.round(Number(n) || 0)));
     // Word budget enforced per-field server-side (not left to model compliance)
@@ -406,7 +410,7 @@ never invent facts; up to 5 items each in strengths/weaknesses/improvements; kee
     };
 
     await queryAsCollege(
-      college_id,
+      cid,
       `UPDATE sessions SET status='complete', is_complete=TRUE, summary=$2 WHERE session_id=$1`,
       [s.session_id, JSON.stringify(result)]
     );
@@ -418,7 +422,8 @@ never invent facts; up to 5 items each in strengths/weaknesses/improvements; kee
 const getResult = async (req, res, next) => {
   try {
     const { user_id, college_id } = req.user;
-    const s = await loadOwnSession(req.params.id, user_id, college_id);
+    const cid = college_id || null;
+    const s = await loadOwnSession(req.params.id, user_id, cid);
     if (!s) return res.status(404).json({ error: 'Not found.' });
     if (s.status !== 'complete' || !s.summary) return res.json({ status: s.status });
     res.json({ status: 'complete', result: JSON.parse(s.summary) });
