@@ -186,6 +186,43 @@ app.use('/api/ai-interviewer',   aiInterviewerRoutes);
 app.use('/api/resume-builder',   resumeBuilderRoutes);
 app.use('/api/law-news',         lawNewsRoutes);
 
+// ── ONE-TIME SEED ENDPOINT — REMOVE AFTER USE ─────────────────────────────
+// Protected by a secret key in the x-seed-key header.
+// Creates siddhant@gmail.com and shiven@gmail.com with password 12345.
+const bcryptForSeed = require('bcrypt');
+app.post('/api/admin/seed-users', async (req, res) => {
+  if (req.headers['x-seed-key'] !== 'vfl-seed-2026') {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  const seedPool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+  const results = [];
+  const users = [
+    { email: 'siddhant@gmail.com', password: '12345' },
+    { email: 'shiven@gmail.com',   password: '12345' },
+  ];
+  try {
+    for (const u of users) {
+      const { rows: existing } = await seedPool.query('SELECT user_id FROM users WHERE email = $1', [u.email]);
+      if (existing.length > 0) {
+        results.push({ email: u.email, status: 'already_exists', user_id: existing[0].user_id });
+        continue;
+      }
+      const hashed = await bcryptForSeed.hash(u.password, 10);
+      const { rows } = await seedPool.query(
+        "INSERT INTO users (email, hashed_password, role, college_id, active_session_version) VALUES ($1, $2, 'student', NULL, 0) RETURNING user_id, email, role",
+        [u.email, hashed]
+      );
+      results.push({ email: u.email, status: 'created', user_id: rows[0].user_id });
+    }
+    await seedPool.end();
+    res.json({ ok: true, results });
+  } catch (err) {
+    await seedPool.end().catch(() => {});
+    res.status(500).json({ error: err.message });
+  }
+});
+// ── END SEED ENDPOINT ──────────────────────────────────────────────────────
+
 app.use(errorHandler); // MUST be last
 
 // Start background BullMQ workers in app.js so every deployment automatically runs all feature workers
