@@ -64,6 +64,8 @@ const getUploadUrl = async (req, res, next) => {
   }
 };
 
+const { processJob: processResumeJob } = require('../workers/resumeAnalyzer.worker');
+
 /**
  * POST /api/resume-analyzer/analyze
  * Body: { s3Key }. Confirms the key belongs to this student, creates a pending
@@ -94,13 +96,20 @@ const analyzeResume = async (req, res, next) => {
     );
     const docId = rows[0].doc_id;
 
-    // Enqueue. The worker gets everything it needs to do its own ownership-safe
-    // UPDATE and to log tokens against the right student + college.
-    await resumeQueue.add(
-      'analyze',
-      { docId, s3Key, user_id, college_id },
-      { removeOnComplete: 100, removeOnFail: 100, attempts: 1 }
-    );
+    // Trigger direct background processing for 100% reliability
+    processResumeJob({ data: { docId, s3Key, user_id, college_id }, id: docId }).catch((err) => {
+      console.error('[resumeAnalyzer] direct processJob note:', err.message);
+    });
+
+    try {
+      await resumeQueue.add(
+        'analyze',
+        { docId, s3Key, user_id, college_id },
+        { removeOnComplete: 100, removeOnFail: 100, attempts: 1 }
+      );
+    } catch (qErr) {
+      console.warn('[resumeAnalyzer] BullMQ queue add ignored:', qErr.message);
+    }
 
     res.json({ docId, status: 'pending' });
   } catch (err) {

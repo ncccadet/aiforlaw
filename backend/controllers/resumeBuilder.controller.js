@@ -254,11 +254,21 @@ const buildResume = async (req, res, next) => {
     }
 
     const buildId = crypto.randomUUID();
-    await resumeBuilderQueue.add(
-      'build',
-      { doc_id: buildId, user_id, college_id, draft, template_id: templateId },
-      { jobId: buildId }
-    );
+
+    const { processJob: processBuildJob } = require('../workers/resumeBuilder.worker');
+    processBuildJob({ data: { doc_id: buildId, user_id, college_id, draft, template_id: templateId }, id: buildId }).catch((e) => {
+      console.error('[resumeBuilder] direct build job failed:', e.message);
+    });
+
+    try {
+      await resumeBuilderQueue.add(
+        'build',
+        { doc_id: buildId, user_id, college_id, draft, template_id: templateId },
+        { jobId: buildId }
+      );
+    } catch (qErr) {
+      console.warn('[resumeBuilder] BullMQ queue add ignored:', qErr.message);
+    }
 
     res.status(202).json({ buildId, status: 'processing' });
   } catch (err) { next(err); }

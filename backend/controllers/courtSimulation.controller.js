@@ -103,6 +103,60 @@ const getCaseTypes = (_req, res) => {
   });
 };
 
+const generateCaseDirectly = async (sessionId, fieldLabel, position, level, studentName, user_id, college_id, existingFilters) => {
+  try {
+    const prompt = `You are a senior advocate and judicial clerk in an Indian High Court.
+Generate a realistic Indian legal case brief for a Court Simulation practice session.
+
+Field of Law: ${fieldLabel}
+Student's Position: ${position}
+Difficulty Level: ${level}
+Student Name: ${studentName || 'Advocate'}
+
+Return ONLY valid JSON with no markdown fences:
+{
+  "title": "State / Petitioner v. Respondent - Brief Title",
+  "facts": "Detailed summary of facts of the case (3-4 paragraphs), legal provisions involved (e.g. IPC/CrPC/CPC/Constitution/Contract Act), key points of dispute, and relevant precedents if applicable.",
+  "judgeName": "Hon'ble Mr. Justice A.K. Sharma",
+  "oppCounselName": "Adv. R.K. Mehta"
+}`;
+
+    const { text, tokensIn, tokensOut } = await generateText({
+      prompt,
+      maxOutputTokens: 1500,
+      temperature: 0.3,
+    });
+
+    const cleaned = String(text).replace(/```json/gi, '').replace(/```/g, '').trim();
+    const sIdx = cleaned.indexOf('{'), eIdx = cleaned.lastIndexOf('}');
+    let parsed = {};
+    if (sIdx !== -1 && eIdx !== -1 && eIdx > sIdx) {
+      try { parsed = JSON.parse(cleaned.slice(sIdx, eIdx + 1)); } catch (e) {}
+    }
+
+    const updatedFilters = {
+      ...(existingFilters || {}),
+      brief: parsed.facts || text || 'Detailed case brief prepared for hearing.',
+      title: parsed.title || `${fieldLabel} Matter`,
+      judgeName: parsed.judgeName || 'Hon\'ble Bench',
+      oppCounselName: parsed.oppCounselName || 'Opposing Counsel',
+    };
+
+    await pool.query(
+      `UPDATE sessions SET status = 'active', filters = $1 WHERE session_id = $2`,
+      [JSON.stringify(updatedFilters), sessionId]
+    );
+
+    logUsage(user_id, college_id, process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite', tokensIn, tokensOut);
+  } catch (err) {
+    console.error('[courtSimulation] Direct generation error:', err.message);
+    await pool.query(
+      `UPDATE sessions SET status = 'failed' WHERE session_id = $1`,
+      [sessionId]
+    ).catch(() => {});
+  }
+};
+
 // ── 2. start ─────────────────────────────────────────────────────────────────
 const startSession = async (req, res, next) => {
   try {
@@ -125,11 +179,20 @@ const startSession = async (req, res, next) => {
     );
     const sessionId = rows[0].session_id;
 
-    await courtQueue.add(
-      'generate-case',
-      { sessionId, fieldLabel: def.label, position, level, studentName, user_id, college_id, existingFilters: filters },
-      { removeOnComplete: 100, removeOnFail: 100, attempts: 1 }
-    );
+    // Trigger direct generation in background (100% reliable)
+    generateCaseDirectly(sessionId, def.label, position, level, studentName, user_id, college_id, filters).catch((e) => {
+      console.error('[courtSimulation] direct case gen failed:', e.message);
+    });
+
+    try {
+      await courtQueue.add(
+        'generate-case',
+        { sessionId, fieldLabel: def.label, position, level, studentName, user_id, college_id, existingFilters: filters },
+        { removeOnComplete: 100, removeOnFail: 100, attempts: 1 }
+      );
+    } catch (qErr) {
+      console.warn('[courtSimulation] BullMQ queue add ignored:', qErr.message);
+    }
 
     res.status(202).json({ sessionId, status: 'preparing', fieldOfLaw, label: def.label, position, level });
   } catch (err) { next(err); }

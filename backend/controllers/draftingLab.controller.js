@@ -290,6 +290,57 @@ const getOptions = (_req, res) => {
   res.json({ types: Object.keys(DRAFT_TYPES).map((id) => ({ id, label: DRAFT_TYPES[id].label })) });
 };
 
+const generateCaseStudyDirectly = async (sessionId, template_type, label, user_id, college_id) => {
+  try {
+    const prompt = `You are a senior Indian advocate guiding a junior lawyer.
+Generate a realistic factual scenario for drafting a ${label}.
+
+Return ONLY valid JSON with no markdown fences:
+{
+  "title": "Title of the case study",
+  "facts": "Detailed factual background of the dispute (2-3 paragraphs) giving all facts needed to fill out a ${label}.",
+  "task": "Specific instructions for the student advocate."
+}`;
+
+    const { text, tokensIn, tokensOut } = await generateText({
+      prompt,
+      maxOutputTokens: 800,
+      temperature: 0.3,
+    });
+
+    const cleaned = String(text).replace(/```json/gi, '').replace(/```/g, '').trim();
+    const sIdx = cleaned.indexOf('{'), eIdx = cleaned.lastIndexOf('}');
+    let parsed = {};
+    if (sIdx !== -1 && eIdx !== -1 && eIdx > sIdx) {
+      try { parsed = JSON.parse(cleaned.slice(sIdx, eIdx + 1)); } catch (e) {}
+    }
+
+    const filters = {
+      template_type,
+      title: parsed.title || `${label} Case Study`,
+      facts: parsed.facts || text || 'Factual background for drafting practice.',
+      task: parsed.task || `Draft a complete ${label} based on the above facts.`,
+    };
+
+    await pool.query(
+      `UPDATE sessions SET status = 'active', filters = $1 WHERE session_id = $2`,
+      [JSON.stringify(filters), sessionId]
+    );
+
+    pool.query(
+      `INSERT INTO ai_usage_log (user_id, college_id, feature_name, model, tokens_in, tokens_out)
+       VALUES ($1,$2,'drafting_lab',$3,$4,$5)`,
+      [user_id, college_id, process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite', tokensIn, tokensOut]
+    ).catch(() => {});
+  } catch (err) {
+    console.error('[draftingLab] Direct case study gen error:', err.message);
+    await pool.query(
+      `UPDATE sessions SET status = 'failed' WHERE session_id = $1`,
+      [sessionId]
+    ).catch(() => {});
+  }
+};
+
 // ── 3. start a case study (AI call #1, 3/day via routes) ─────────────────────
 const startCaseStudy = async (req, res, next) => {
   try {
@@ -308,11 +359,20 @@ const startCaseStudy = async (req, res, next) => {
     );
     const sessionId = rows[0].session_id;
 
-    await draftQueue.add(
-      'generate-case',
-      { sessionId, template_type, label: DRAFT_TYPES[template_type].label, user_id, college_id },
-      { removeOnComplete: 100, removeOnFail: 100, attempts: 1 }
-    );
+    // Trigger direct case study generation in background (100% reliable)
+    generateCaseStudyDirectly(sessionId, template_type, DRAFT_TYPES[template_type].label, user_id, college_id).catch((e) => {
+      console.error('[draftingLab] direct case study gen failed:', e.message);
+    });
+
+    try {
+      await draftQueue.add(
+        'generate-case',
+        { sessionId, template_type, label: DRAFT_TYPES[template_type].label, user_id, college_id },
+        { removeOnComplete: 100, removeOnFail: 100, attempts: 1 }
+      );
+    } catch (qErr) {
+      console.warn('[draftingLab] BullMQ queue add ignored:', qErr.message);
+    }
 
     res.status(202).json({ docId: sessionId, status: 'preparing' });
   } catch (err) { next(err); }

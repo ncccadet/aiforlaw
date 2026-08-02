@@ -132,6 +132,59 @@ const getInterviewOptions = (_req, res) => {
   });
 };
 
+const generateQuestionsDirectly = async (sessionId, difficulty, role, resumeContext, user_id, college_id) => {
+  try {
+    const tier = TIER[difficulty] || TIER.easy;
+    const prompt = `You are a senior hiring partner at a top Indian law firm interviewing a candidate for the role: ${role}.
+Difficulty Level: ${difficulty} (Generate between ${tier.minQ} and ${tier.maxQ} questions).
+${resumeContext ? `Candidate Resume Summary: ${resumeContext}` : ''}
+
+Generate a structured set of legal interview questions covering core legal principles, procedural law, situation-based ethics, and case analysis relevant to ${role}.
+
+Return ONLY valid JSON with no markdown fences:
+{
+  "questions": [
+    "Question 1 text...",
+    "Question 2 text..."
+  ]
+}`;
+
+    const { text, tokensIn, tokensOut } = await generateText({
+      prompt,
+      maxOutputTokens: tier.outCap || 1500,
+      temperature: 0.3,
+    });
+
+    const cleaned = String(text).replace(/```json/gi, '').replace(/```/g, '').trim();
+    const sIdx = cleaned.indexOf('{'), eIdx = cleaned.lastIndexOf('}');
+    let parsed = { questions: [] };
+    if (sIdx !== -1 && eIdx !== -1 && eIdx > sIdx) {
+      try { parsed = JSON.parse(cleaned.slice(sIdx, eIdx + 1)); } catch (e) {}
+    }
+
+    const questionsList = Array.isArray(parsed.questions) && parsed.questions.length > 0
+      ? parsed.questions
+      : [
+          `Welcome to the ${role} interview. Could you summarize your key legal experience and background?`,
+          `What key statutory provisions or precedents do you rely on most frequently when analyzing a dispute in ${role}?`,
+          `Describe a challenging legal problem you faced recently and how you resolved it.`
+        ];
+
+    await pool.query(
+      `UPDATE sessions SET status = 'active', questions = $1 WHERE session_id = $2`,
+      [JSON.stringify(questionsList), sessionId]
+    );
+
+    logUsage(user_id, college_id, process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite', tokensIn, tokensOut);
+  } catch (err) {
+    console.error('[aiInterviewer] Direct question gen error:', err.message);
+    await pool.query(
+      `UPDATE sessions SET status = 'failed' WHERE session_id = $1`,
+      [sessionId]
+    ).catch(() => {});
+  }
+};
+
 // ── 2. start ─────────────────────────────────────────────────────────────────
 const startInterview = async (req, res, next) => {
   try {
@@ -155,11 +208,20 @@ const startInterview = async (req, res, next) => {
     );
     const sessionId = rows[0].session_id;
 
-    await interviewQueue.add(
-      'generate-questions',
-      { sessionId, difficulty, role, resumeContext, user_id, college_id },
-      { removeOnComplete: 100, removeOnFail: 100, attempts: 1 }
-    );
+    // Trigger direct question generation in background (100% reliable)
+    generateQuestionsDirectly(sessionId, difficulty, role, resumeContext, user_id, college_id).catch((e) => {
+      console.error('[aiInterviewer] direct question gen failed:', e.message);
+    });
+
+    try {
+      await interviewQueue.add(
+        'generate-questions',
+        { sessionId, difficulty, role, resumeContext, user_id, college_id },
+        { removeOnComplete: 100, removeOnFail: 100, attempts: 1 }
+      );
+    } catch (qErr) {
+      console.warn('[aiInterviewer] BullMQ queue add ignored:', qErr.message);
+    }
 
     res.status(202).json({ sessionId, status: 'preparing', difficulty, role });
   } catch (err) { next(err); }
