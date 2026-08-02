@@ -699,8 +699,8 @@ export default function AIInterviewerPage() {
 }
 
 const STYLES = `
-.iv-root{--bg:#0e0e0e;--surface:#1a1a1a;--surface-2:#242424;--border:#343434;--text:#ededed;--muted:#9a9a9a;--accent:#d8d8d8;--rec:#c96b6b;--ok:#7fbf7f;
-  min-height:100vh;background:var(--bg);color:var(--text);font-family:Georgia,'Times New Roman','Noto Serif',serif;line-height:1.5;}
+.iv-root{--bg:#090a0f;--surface:#12131a;--surface-2:#1c1e29;--border:rgba(212, 175, 55, 0.25);--text:#f8f5eb;--muted:#b8af94;--accent:#d4af37;--rec:#e57373;--ok:#81c784;
+  min-height:100vh;background:radial-gradient(circle at 50% 10%, #15140f 0%, #07070a 70%);color:var(--text);font-family:'Lora',Georgia,'Times New Roman','Noto Serif',serif;line-height:1.5;}
 .iv-container{max-width:900px;margin:0 auto;padding:clamp(16px,4vw,40px);}
 .iv-center{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:14px;}
 .iv-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:18px;margin-bottom:18px;}

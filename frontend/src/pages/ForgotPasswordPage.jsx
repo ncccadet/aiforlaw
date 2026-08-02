@@ -74,34 +74,35 @@ export default function ForgotPasswordPage() {
 
 const styles = {
   page: {
-    minHeight: '100vh', width: '100%', background: '#0a0a0a',
+    minHeight: '100vh', width: '100%',
+    background: 'radial-gradient(circle at 50% 30%, #17150e 0%, #08080a 70%)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontFamily: "'Calisto MT', Georgia, serif", padding: '1.5rem', boxSizing: 'border-box'
+    fontFamily: "'Cormorant Garamond', 'Calisto MT', Georgia, serif", padding: '1.5rem', boxSizing: 'border-box'
   },
   card: {
-    width: '100%', maxWidth: '400px',
-    background: 'rgba(255, 255, 255, 0.06)',
-    backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-    border: '1px solid rgba(255, 255, 255, 0.12)', borderRadius: '16px',
-    padding: '2.5rem 2rem', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+    width: '100%', maxWidth: '420px',
+    background: 'rgba(16, 16, 20, 0.85)',
+    backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+    border: '1px solid rgba(212, 175, 55, 0.3)', borderRadius: '16px',
+    padding: '2.5rem 2.25rem', boxShadow: '0 12px 40px rgba(0, 0, 0, 0.7), 0 0 20px rgba(212, 175, 55, 0.08)',
     display: 'flex', flexDirection: 'column'
   },
-  title: { color: '#fff', fontSize: '1.75rem', margin: 0, textAlign: 'center' },
-  subtitle: { color: 'rgba(255,255,255,0.6)', fontSize: '0.95rem', textAlign: 'center', marginTop: '0.5rem', marginBottom: '2rem' },
-  label: { color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem', marginBottom: '0.4rem' },
+  title: { color: '#f5d77f', fontSize: '2rem', fontWeight: '700', margin: 0, textAlign: 'center', letterSpacing: '0.04em' },
+  subtitle: { color: '#c5bc9c', fontSize: '0.95rem', textAlign: 'center', marginTop: '0.5rem', marginBottom: '2rem' },
+  label: { color: '#e5c158', fontSize: '0.85rem', marginBottom: '0.4rem' },
   input: {
-    background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
-    borderRadius: '8px', padding: '0.75rem 1rem', color: '#fff', fontSize: '1rem',
+    background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(212, 175, 55, 0.25)',
+    borderRadius: '8px', padding: '0.75rem 1rem', color: '#f8f6f0', fontSize: '1rem',
     fontFamily: 'inherit', outline: 'none'
   },
   button: {
     marginTop: '2rem', padding: '0.85rem', borderRadius: '10px', border: 'none',
-    background: 'rgba(255,255,255,0.9)', color: '#0a0a0a', fontSize: '1rem',
-    fontWeight: 'bold', fontFamily: 'inherit', cursor: 'pointer'
+    background: 'linear-gradient(135deg, #f5d77f 0%, #d4af37 50%, #b8860b 100%)', color: '#08080a', fontSize: '1rem',
+    fontWeight: '700', fontFamily: 'inherit', cursor: 'pointer', boxShadow: '0 4px 20px rgba(212, 175, 55, 0.3)'
   },
-  link: { marginTop: '1.25rem', textAlign: 'center', color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', textDecoration: 'none' },
+  link: { marginTop: '1.25rem', textAlign: 'center', color: '#d4af37', fontSize: '0.9rem', textDecoration: 'none', opacity: 0.85 },
   error: {
-    background: 'rgba(255, 80, 80, 0.15)', border: '1px solid rgba(255, 80, 80, 0.4)',
-    color: '#ff9d9d', borderRadius: '8px', padding: '0.7rem 1rem', fontSize: '0.85rem', marginBottom: '0.5rem'
+    background: 'rgba(212, 70, 70, 0.15)', border: '1px solid rgba(212, 70, 70, 0.4)',
+    color: '#ffa8a8', borderRadius: '8px', padding: '0.7rem 1rem', fontSize: '0.85rem', marginBottom: '0.5rem'
   }
 };

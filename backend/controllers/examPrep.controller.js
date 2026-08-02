@@ -45,8 +45,8 @@ const PRACTICE_NOTE = 'AI-generated practice paper — not an official exam pape
 // paper — MEASURED on staging 2026-07-28, not estimated). That single change
 // drops the worst case from Rs 11,729 to Rs 7,718 at 350 students.
 // Must match featureLimitMonthly() in the routes file.
-const AIBE_MONTHLY_LIMIT = 15;
-const SPPU_MONTHLY_LIMIT = 15;
+const AIBE_MONTHLY_LIMIT = 25;
+const SPPU_MONTHLY_LIMIT = 25;
 const CHARS_PER_TOKEN = 4;
 const LATE_GRACE_MS = 120 * 1000;  // network slack on a timed submission
 

@@ -386,10 +386,10 @@ function ResumeAnalyzerFeature() {
 /* ── Scoped styles: black + grey, serif, fully responsive ─────────────────── */
 const RA_STYLES = `
 .ra-root {
-  --bg: #0e0e0e; --surface: #1a1a1a; --surface-2: #242424; --border: #343434;
-  --text: #ededed; --muted: #9a9a9a; --accent: #d8d8d8; --good: #cfcfcf; --improve: #8f8f8f;
-  min-height: 100vh; background: var(--bg); color: var(--text);
-  font-family: Georgia, 'Times New Roman', 'Noto Serif', serif;
+  --bg: #090a0f; --surface: #12131a; --surface-2: #1c1e29; --border: rgba(212, 175, 55, 0.25);
+  --text: #f8f5eb; --muted: #b8af94; --accent: #d4af37; --good: #ffd700; --improve: #c5a059;
+  min-height: 100vh; background: radial-gradient(circle at 50% 10%, #15140f 0%, #07070a 70%); color: var(--text);
+  font-family: 'Lora', Georgia, 'Times New Roman', 'Noto Serif', serif;
   -webkit-font-smoothing: antialiased; line-height: 1.5;
 }
 .ra-container { max-width: 960px; margin: 0 auto; padding: clamp(16px, 4vw, 40px); }

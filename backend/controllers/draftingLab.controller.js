@@ -8,7 +8,7 @@
  *          presigned S3 GET url for every specimen that has a real stored PDF.
  *          No AI, unlimited, zero cost.
  *   2. GET  /options                    → the 5 draft types, for Step 2's picker.
- *   3. POST /case-study {template_type} → 3/day (featureLimit in routes).
+ *   3. POST /case-study {template_type} → 50/month (featureLimitMonthly in routes).
  *          Creates a `sessions` row (feature_name='drafting_lab', status
  *          'preparing'), enqueues the worker's Call 1 (generate a case).
  *   4. GET  /case-study/result/:id      → poll; once 'active', returns the

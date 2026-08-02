@@ -35,11 +35,9 @@ const {
   getAnalytics,
 } = require('../controllers/examPrep.controller');
 
-// Distinct Redis feature names => distinct counters. Renaming away from the old
-// shared 'exam_prep' key also means nobody carries a part-used shared tally into
-// the new scheme; everyone starts this month with a clean 15 and 15.
-const aibeLimit = featureLimitMonthly('exam_prep_aibe', 15);
-const sppuLimit = featureLimitMonthly('exam_prep_sppu', 15);
+// Distinct Redis feature names => distinct counters. 25 AIBE + 25 SPPU (50 total papers/month limit).
+const aibeLimit = featureLimitMonthly('exam_prep_aibe', 25);
+const sppuLimit = featureLimitMonthly('exam_prep_sppu', 25);
 
 // Read-only: exam structure, and resuming a paper already paid for.
 router.get('/structure', authMiddleware, getStructure);

@@ -408,25 +408,26 @@ export default function JobBoardPage() {
 }
 
 const glass = {
-  background: 'rgba(255, 255, 255, 0.06)',
+  background: 'rgba(18, 19, 26, 0.85)',
   backdropFilter: 'blur(16px)',
   WebkitBackdropFilter: 'blur(16px)',
-  border: '1px solid rgba(255, 255, 255, 0.12)',
+  border: '1px solid rgba(212, 175, 55, 0.25)',
 };
 
 const styles = {
   page: {
     minHeight: '100vh',
     width: '100%',
-    background: '#0a0a0a',
-    fontFamily: "'Calisto MT', Georgia, serif",
+    background: 'radial-gradient(circle at 50% 10%, #15140f 0%, #07070a 70%)',
+    fontFamily: "'Lora', 'Calisto MT', Georgia, serif",
     padding: '2.5rem 1.5rem',
     boxSizing: 'border-box',
+    color: '#f8f5eb',
   },
   container: { maxWidth: 880, margin: '0 auto' },
   header: { textAlign: 'center', marginBottom: '2rem' },
-  title: { color: '#fff', fontSize: '2rem', margin: 0 },
-  subtitle: { color: 'rgba(255,255,255,0.6)', fontSize: '0.95rem', marginTop: '0.5rem' },
+  title: { color: '#f5d77f', fontSize: '2rem', margin: 0, fontWeight: '700' },
+  subtitle: { color: '#b8af94', fontSize: '0.95rem', marginTop: '0.5rem' },
 
   tabBar: { display: 'flex', flexWrap: 'wrap', gap: '0.6rem', marginBottom: '0.75rem' },
   tab: {

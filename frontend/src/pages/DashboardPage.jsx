@@ -29,10 +29,10 @@ const DASHBOARD_ENDPOINT = '/api/dashboard/summary';
 // Paths match App.jsx's actual routes exactly (job-board's real route is
 // /jobs, not /job-board — checked against App.jsx, not guessed).
 const FEATURE_META = {
-  'exam-prep': { id: '01', name: 'Exam Prep', path: '/exam-prep', ai: false, blurb: 'Practice MCQs and long-form answers built from your syllabus.' },
+  'exam-prep': { id: '01', name: 'Exam Prep', path: '/exam-prep', ai: true, blurb: 'Practice MCQs and long-form answers built from your syllabus. 25 Bar + 25 university a month.' },
   'resume-analyzer': { id: '02', name: 'Resume Analyzer', path: '/resume-analyzer', ai: true, blurb: 'Upload your resume and get a structured, section-wise review.' },
   'job-board': { id: '03', name: 'Job Board', path: '/jobs', ai: false, blurb: 'Openings from courts, legal aid bodies and placement cells.' },
-  'drafting-lab': { id: '04', name: 'Drafting Lab', path: '/drafting-lab', ai: true, blurb: 'Study templates, practice fill-ins, and draft from case studies.' },
+  'drafting-lab': { id: '04', name: 'Drafting Lab', path: '/drafting-lab', ai: true, blurb: 'Study templates, practice fill-ins, and draft from case studies. 50 exercises a month.' },
   'court-simulation': { id: '05', name: 'Court Simulation', path: '/court-simulation', ai: true, blurb: 'Argue a structured 8-turn matter against an AI bench.' },
   'ai-interviewer': { id: '06', name: 'AI Interviewer', path: '/ai-interviewer', ai: true, blurb: 'A spoken mock interview, question by question, at your pace.' },
   'resume-builder': { id: '07', name: 'Resume Builder', path: '/resume-builder', ai: false, blurb: 'A guided 20-section form that outputs a clean, formal PDF.' },
@@ -146,19 +146,20 @@ export default function DashboardPage() {
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap');
 
         .vfl-dash {
-          --ink:        #0d0d0f;   /* near-black page ground        */
-          --coal:       #16161a;   /* card ground                   */
-          --graphite:   #232329;   /* raised / hover surface        */
-          --seam:       #2e2e35;   /* hairline borders              */
-          --ash:        #8b8b93;   /* secondary text                */
-          --bone:       #e8e6e1;   /* primary text, warm off-white  */
-          --silver:     #c9c7c2;   /* headings' quieter companion   */
+          --ink:        #07070a;   /* obsidian background           */
+          --coal:       #111116;   /* card ground                   */
+          --graphite:   #1c1a14;   /* raised / hover surface        */
+          --seam:       rgba(212, 175, 55, 0.22); /* gold hairline borders */
+          --ash:        #b8af94;   /* warm secondary text           */
+          --bone:       #f8f5eb;   /* primary text, warm off-white  */
+          --silver:     #f5d77f;   /* gold accent companion         */
+          --gold:       #d4af37;   /* metallic gold                 */
 
           --serif-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
           --serif-body:    'Lora', Georgia, serif;
 
           min-height: 100vh;
-          background: var(--ink);
+          background: radial-gradient(circle at 50% 10%, #15140f 0%, #07070a 60%);
           color: var(--bone);
           font-family: var(--serif-body);
           -webkit-font-smoothing: antialiased;

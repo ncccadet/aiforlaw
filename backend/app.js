@@ -106,13 +106,13 @@ const DASHBOARD_FEATURES = [
   // timed, so it is ai:true with a hard MONTHLY limit — not per day. Students
   // revise in bursts before an exam, so a daily cap would be useless to them.
   //
-  // Exam Prep is the only feature with TWO counters: 15 AIBE + 15 SPPU, gated
+  // Exam Prep is the only feature with TWO counters: 25 AIBE + 25 SPPU, gated
   // separately in examPrep.routes.js. `redisNames` (plural) sums them for this
   // one card, because the dashboard has room for a single usage bar per
-  // feature. The bar therefore reads "n of 30 used this month" while the real
-  // gate is 15 + 15 — the page itself shows the two numbers separately, which
+  // feature. The bar therefore reads "n of 50 used this month" while the real
+  // gate is 25 + 25 — the page itself shows the two numbers separately, which
   // is where a student who has exhausted one but not the other will look.
-  { key: 'exam-prep',        name: 'Exam Prep',        path: '/exam-prep',        ai: true,  blurb: 'Full AIBE and university papers, timed and auto-graded. 15 Bar + 15 university a month.', cap: { max: 30, unit: 'month', redisNames: ['exam_prep_aibe', 'exam_prep_sppu'], window: 'monthly' } },
+  { key: 'exam-prep',        name: 'Exam Prep',        path: '/exam-prep',        ai: true,  blurb: 'Full AIBE and university papers, timed and auto-graded. 25 Bar + 25 university a month.', cap: { max: 50, unit: 'month', redisNames: ['exam_prep_aibe', 'exam_prep_sppu'], window: 'monthly' } },
   // cap corrected 2026-07-22: this entry previously said 50/month, which
   // matched an earlier (2026-07-21) revision decision — but the actual
   // contract (_contracts/02-resume-analyzer.md, written the same day) settled
@@ -121,7 +121,7 @@ const DASHBOARD_FEATURES = [
   // route actually enforces; fixed to match (contract wins per project rule).
   { key: 'resume-analyzer',  name: 'Resume Analyzer',  path: '/resume-analyzer',  ai: true,  blurb: 'Upload your resume and get a structured, section-wise review.', cap: null },
   { key: 'job-board',        name: 'Job Board',        path: '/jobs',             ai: false, blurb: 'Openings from courts, legal aid bodies and placement cells.', cap: null },
-  { key: 'drafting-lab',     name: 'Drafting Lab',     path: '/drafting-lab',     ai: true,  blurb: 'Learn real Delhi & Maharashtra formats, then draft and get scored.', cap: { max: 3, unit: 'day', redisName: 'drafting_lab', window: 'daily' } },
+  { key: 'drafting-lab',     name: 'Drafting Lab',     path: '/drafting-lab',     ai: true,  blurb: 'Learn real Delhi & Maharashtra formats, then draft and get scored. 50 exercises a month.', cap: { max: 50, unit: 'month', redisName: 'drafting_lab', window: 'monthly' } },
   { key: 'court-simulation', name: 'Court Simulation', path: '/court-simulation', ai: true,  blurb: 'Argue a live case (up to 15 turns) against an AI bench and opposing counsel.', cap: { max: 16, unit: 'month', redisName: 'court_simulation', window: 'monthly' } },
   { key: 'ai-interviewer',   name: 'AI Interviewer',   path: '/ai-interviewer',   ai: true,  blurb: 'A spoken mock interview, question by question, at your pace.', cap: { max: 16, unit: 'month', redisName: 'ai_interviewer', window: 'monthly' } },
   // ai flipped false -> true 2026-07-22: /build now runs one Gemini polish

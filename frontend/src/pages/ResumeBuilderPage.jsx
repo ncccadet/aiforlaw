@@ -575,14 +575,14 @@ const CompletenessBar = ({ completeness, saveState }) => (
 // states + selection. Two serif roles: Playfair Display (display/headings)
 // and Source Serif 4 (body/labels/inputs) — both genuinely serif per brief,
 // not a sans-serif body dressed up with a serif h1.
-const INK = '#C9C6BC';        // primary text — warm parchment grey, not white
-const INK_DIM = '#8B8880';    // secondary text (subtitles, captions)
-const INK_FAINT = '#726E63';  // tertiary text (hints, placeholders, disabled) — 3.89:1 on BG
-const BG = '#0A0A08';         // page background — warm near-black
-const SURFACE = 'rgba(255,255,255,0.035)'; // card fill
-const HAIRLINE = 'rgba(201,198,188,0.12)'; // neutral hairline borders
-const ACCENT = '#B08D57';     // brass / antique gold — the one bold choice
-const ACCENT_DIM = 'rgba(176,141,87,0.14)';
+const INK = '#F8F5EB';        // primary text — warm off-white
+const INK_DIM = '#B8AF94';    // secondary text (subtitles, captions)
+const INK_FAINT = '#8B8880';  // tertiary text (hints, placeholders, disabled)
+const BG = '#090A0F';         // page background — deep luxury black
+const SURFACE = 'rgba(18, 19, 26, 0.85)'; // card fill
+const HAIRLINE = 'rgba(212, 175, 55, 0.25)'; // gold hairline borders
+const ACCENT = '#D4AF37';     // metallic gold
+const ACCENT_DIM = 'rgba(212, 175, 55, 0.18)';
 const DISPLAY_FONT = "'Playfair Display', Georgia, 'Times New Roman', serif";
 const BODY_FONT = "'Source Serif 4', Georgia, 'Times New Roman', serif";
 
