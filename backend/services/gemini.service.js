@@ -51,56 +51,69 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  */
 async function generateText({ prompt, maxOutputTokens = 800, temperature = 0.2, timeoutMs = 20000, retries429 = 3 }) {
   const apiKey = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || DEFAULT_MODEL;
-
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY is not set — cannot call Gemini');
   }
 
-  const url = `${GEMINI_BASE}/models/${model}:generateContent`;
+  const requestedModel = process.env.GEMINI_MODEL || DEFAULT_MODEL;
+  const modelsToTry = Array.from(new Set([
+    requestedModel,
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+    'gemini-1.5-flash-8b',
+    'gemini-pro'
+  ]));
 
   let lastErr;
-  for (let attempt = 0; attempt <= retries429; attempt++) {
-    try {
-      const response = await axios.post(
-        url,
-        {
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens, temperature },
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': apiKey,
+  for (const model of modelsToTry) {
+    const url = `${GEMINI_BASE}/models/${model}:generateContent`;
+    for (let attempt = 0; attempt <= retries429; attempt++) {
+      try {
+        const response = await axios.post(
+          url,
+          {
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { maxOutputTokens, temperature },
           },
-          timeout: timeoutMs,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': apiKey,
+            },
+            timeout: timeoutMs,
+          }
+        );
+
+        const data = response.data;
+        const candidate = data?.candidates?.[0];
+        const text = candidate?.content?.parts?.map((p) => p.text).join('') || '';
+        const tokensIn = data?.usageMetadata?.promptTokenCount || 0;
+        const tokensOut = data?.usageMetadata?.candidatesTokenCount || 0;
+        const finishReason = candidate?.finishReason;
+
+        return { text, tokensIn, tokensOut, finishReason, model };
+      } catch (err) {
+        lastErr = err;
+        const status = err.response?.status;
+        console.warn(`[gemini.service] Call failed for model ${model} (status ${status}):`, err.response?.data?.error?.message || err.message);
+
+        // If 404 or 400 (model not found), break inner retry loop to try next model in modelsToTry
+        if (status === 404 || status === 400) {
+          break;
         }
-      );
 
-      const data = response.data;
-      const candidate = data?.candidates?.[0];
-      const text = candidate?.content?.parts?.map((p) => p.text).join('') || '';
-      const tokensIn = data?.usageMetadata?.promptTokenCount || 0;
-      const tokensOut = data?.usageMetadata?.candidatesTokenCount || 0;
-
-      // finishReason 'MAX_TOKENS' means the response was truncated — caller
-      // should treat this as a partial/unreliable result, not silently trust it.
-      const finishReason = candidate?.finishReason;
-
-      return { text, tokensIn, tokensOut, finishReason, model };
-    } catch (err) {
-      const status = err.response?.status;
-      if (status !== 429 || attempt === retries429) {
-        throw err;
+        if (status !== 429 || attempt === retries429) {
+          break;
+        }
+        const retryAfterHeader = err.response?.headers?.['retry-after'];
+        const retryAfterMs = retryAfterHeader ? Number(retryAfterHeader) * 1000 : null;
+        const backoffMs = retryAfterMs && !Number.isNaN(retryAfterMs) ? retryAfterMs : 1500 * Math.pow(2, attempt);
+        await sleep(backoffMs);
       }
-      lastErr = err;
-      const retryAfterHeader = err.response?.headers?.['retry-after'];
-      const retryAfterMs = retryAfterHeader ? Number(retryAfterHeader) * 1000 : null;
-      const backoffMs = retryAfterMs && !Number.isNaN(retryAfterMs) ? retryAfterMs : 1500 * Math.pow(2, attempt);
-      await sleep(backoffMs);
     }
   }
-  throw lastErr; // unreachable, satisfies linters expecting a final throw/return
+  throw lastErr;
 }
 
 module.exports = { generateText, DEFAULT_MODEL };

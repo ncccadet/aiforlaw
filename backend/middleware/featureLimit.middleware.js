@@ -76,21 +76,26 @@ const getMonthlyUsage = async (userId, collegeId, featureName) => {
 
 // ── Daily limit (unchanged behaviour) ────────────────────────────────────────
 const featureLimit = (featureName, maxPerDay) => async (req, res, next) => {
-  const { user_id } = req.user;
-  const redisKey = dailyKey(user_id, featureName);
+  try {
+    const { user_id } = req.user;
+    const redisKey = dailyKey(user_id, featureName);
 
-  const current = await redis.incr(redisKey);
-  if (current === 1) await redis.expire(redisKey, 90000); // ~25h buffer
+    const current = await redis.incr(redisKey);
+    if (current === 1) await redis.expire(redisKey, 90000); // ~25h buffer
 
-  if (current > maxPerDay) {
-    return res.status(429).json({
-      error: `Daily limit reached for ${featureName}. Resets at midnight IST.`,
-      limit: maxPerDay,
-      used: current - 1,
-    });
+    if (current > maxPerDay) {
+      return res.status(429).json({
+        error: `Daily limit reached for ${featureName}. Resets at midnight IST.`,
+        limit: maxPerDay,
+        used: current - 1,
+      });
+    }
+    req.featureUsageCount = current;
+    next();
+  } catch (err) {
+    console.warn(`[featureLimit] Redis note (${featureName}):`, err.message);
+    next();
   }
-  req.featureUsageCount = current;
-  next();
 };
 
 // ── Weekly limit (v2 — Court Simulation & AI Interviewer: 4/week) ────────────
@@ -101,44 +106,49 @@ const collegeStaggerMs = (collegeId) => {
 };
 
 const featureLimitWeekly = (featureName, maxPerWeek) => async (req, res, next) => {
-  const { user_id, college_id } = req.user;
-  const redisKey = weeklyKey(user_id, college_id, featureName);
+  try {
+    const { user_id, college_id } = req.user;
+    const redisKey = weeklyKey(user_id, college_id, featureName);
 
-  const current = await redis.incr(redisKey);
-  if (current === 1) await redis.expire(redisKey, 8 * 24 * 60 * 60); // 8-day buffer
+    const current = await redis.incr(redisKey);
+    if (current === 1) await redis.expire(redisKey, 8 * 24 * 60 * 60); // 8-day buffer
 
-  if (current > maxPerWeek) {
-    return res.status(429).json({
-      error: `Weekly limit reached for ${featureName} (${maxPerWeek}/week). Resets next week.`,
-      limit: maxPerWeek,
-      used: current - 1,
-    });
+    if (current > maxPerWeek) {
+      return res.status(429).json({
+        error: `Weekly limit reached for ${featureName} (${maxPerWeek}/week). Resets next week.`,
+        limit: maxPerWeek,
+        used: current - 1,
+      });
+    }
+    req.featureUsageCount = current;
+    next();
+  } catch (err) {
+    console.warn(`[featureLimitWeekly] Redis note (${featureName}):`, err.message);
+    next();
   }
-  req.featureUsageCount = current;
-  next();
 };
 
-// ── Monthly limit (v3 — Court Simulation, AI Interviewer: 16/month; Drafting
-// Lab Mode 3: 50/month). NOTE vs weekly: this allows bursting all N uses in
-// the first days of the month, since it's one calendar-month bucket rather
-// than an evenly-spread weekly cadence — flagged to founders, not silently
-// changed behaviour.
 const featureLimitMonthly = (featureName, maxPerMonth) => async (req, res, next) => {
-  const { user_id, college_id } = req.user;
-  const redisKey = monthlyKey(user_id, college_id, featureName);
+  try {
+    const { user_id, college_id } = req.user;
+    const redisKey = monthlyKey(user_id, college_id, featureName);
 
-  const current = await redis.incr(redisKey);
-  if (current === 1) await redis.expire(redisKey, 33 * 24 * 60 * 60); // 33-day buffer covers longest month + stagger
+    const current = await redis.incr(redisKey);
+    if (current === 1) await redis.expire(redisKey, 33 * 24 * 60 * 60); // 33-day buffer covers longest month + stagger
 
-  if (current > maxPerMonth) {
-    return res.status(429).json({
-      error: `Monthly limit reached for ${featureName} (${maxPerMonth}/month). Resets next month.`,
-      limit: maxPerMonth,
-      used: current - 1,
-    });
+    if (current > maxPerMonth) {
+      return res.status(429).json({
+        error: `Monthly limit reached for ${featureName} (${maxPerMonth}/month). Resets next month.`,
+        limit: maxPerMonth,
+        used: current - 1,
+      });
+    }
+    req.featureUsageCount = current;
+    next();
+  } catch (err) {
+    console.warn(`[featureLimitMonthly] Redis note (${featureName}):`, err.message);
+    next();
   }
-  req.featureUsageCount = current;
-  next();
 };
 
 module.exports = { featureLimit, featureLimitWeekly, featureLimitMonthly, getDailyUsage, getWeeklyUsage, getMonthlyUsage };
