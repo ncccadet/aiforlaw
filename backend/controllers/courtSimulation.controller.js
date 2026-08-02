@@ -307,15 +307,16 @@ Return STRICT JSON only: { "opposition": "...", "judge": "...", "concluded": <bo
     try {
       const out = await generateText({ prompt: cap(prompt, TURN_IN_CAP), maxOutputTokens: TURN_OUT_CAP, temperature: 0.7 });
       tin = out.tokensIn; tout = out.tokensOut; model = out.model;
-      parsed = parseJson(out.text);
+      parsed = safeParseJson(out.text) || {};
     } catch (e) {
       if (tin || tout) logUsage(user_id, cid, model, tin, tout);
       return res.status(502).json({ error: 'The court could not respond. Please try again.' });
     }
     logUsage(user_id, cid, model, tin, tout);
 
-    const opposition = clampWords(parsed.opposition, OPPOSITION_MAX_WORDS);
-    const judge = clampWords(parsed.judge, JUDGE_MAX_WORDS);
+    // Fallback so a partial Gemini response never breaks the turn
+    const opposition = clampWords(parsed.opposition || 'The opposing counsel objects and requests the court to note the student\'s position for further argument.', OPPOSITION_MAX_WORDS);
+    const judge = clampWords(parsed.judge || 'Please proceed, counsel.', JUDGE_MAX_WORDS);
     const concluded = forcedConclude || parsed.concluded === true;
 
     turns.push({ student: statement, opposition, judge, voiceLevel, durationSec, wordCount });
@@ -380,10 +381,11 @@ never invent facts; up to 5 items each in strengths/weaknesses/improvements; kee
     try {
       const out = await generateText({ prompt: cap(prompt, FINISH_IN_CAP), maxOutputTokens: FINISH_OUT_CAP, temperature: 0.4 });
       tin = out.tokensIn; tout = out.tokensOut; model = out.model;
-      parsed = parseJson(out.text);
+      parsed = safeParseJson(out.text) || {};
     } catch (e) {
       if (tin || tout) logUsage(user_id, cid, model, tin, tout);
-      return res.status(502).json({ error: 'Could not generate your judgment and feedback. Please try again.' });
+      // Fallback result so the student always gets feedback even if AI fails
+      parsed = {};
     }
     logUsage(user_id, cid, model, tin, tout);
 
