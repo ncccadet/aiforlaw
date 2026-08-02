@@ -319,33 +319,28 @@ function PracticeTab() {
 }
 
 const STYLES = `
-.dl-root{--bg:#090a0f;--surface:#12131a;--surface-2:#1c1e29;--border:rgba(212, 175, 55, 0.25);--text:#f8f5eb;--muted:#b8af94;--accent:#d4af37;
-  min-height:100vh;background:radial-gradient(circle at 50% 10%, #15140f 0%, #07070a 70%);color:var(--text);font-family:'Lora',Georgia,'Times New Roman','Noto Serif',serif;line-height:1.5;}
+.dl-root{--bg:#090a0f;--surface:rgba(18, 19, 26, 0.88);--surface-2:rgba(28, 30, 42, 0.95);--border:rgba(212, 175, 55, 0.32);--text:#f8f5eb;--muted:#b8af94;--accent:#d4af37;
+  min-height:100vh;background:radial-gradient(ellipse at 50% 10%, #1e1a10 0%, #06070a 70%);color:var(--text);font-family:'Lora',Georgia,'Times New Roman','Noto Serif',serif;line-height:1.5;}
 .dl-container{max-width:1000px;margin:0 auto;padding:clamp(16px,4vw,40px);}
 .dl-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:18px;margin-bottom:18px;}
-.dl-title{font-size:clamp(24px,5vw,34px);margin:0 0 6px;font-weight:700;}
+.dl-title{font-size:clamp(24px,5vw,36px);margin:0 0 6px;font-weight:700;background:linear-gradient(135deg, #FFF1C5 0%, #D4AF37 50%, #AA771C 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 2px 10px rgba(212, 175, 55, 0.3));}
 .dl-subtitle{margin:0;color:var(--muted);font-size:clamp(14px,2.5vw,16px);}
-.dl-badge{border:1px solid var(--border);color:var(--muted);border-radius:999px;padding:4px 12px;font-size:12px;white-space:nowrap;background:var(--surface);}
-/* The two tab labels ("2-3 · Practice & Feedback") are wider than a 360px
-   phone, and this row had no wrap — so the second tab ran off the right edge
-   and pushed a horizontal scrollbar onto the whole page, which is what made
-   every screen below it look misaligned. Wrapping, and letting each tab take
-   an equal share of the row, keeps both on screen at any width. */
+.dl-badge{border:1px solid var(--border);color:var(--accent);border-radius:999px;padding:4px 14px;font-size:12px;white-space:nowrap;background:rgba(212, 175, 55, 0.1);box-shadow:0 0 10px rgba(212, 175, 55, 0.1);}
 .dl-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
-.dl-tab{flex:1 1 auto;font-family:inherit;font-size:14px;padding:8px 16px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;}
-.dl-tab.on{color:var(--text);border-color:var(--accent);background:var(--surface-2);}
-.dl-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:clamp(16px,3vw,24px);margin-bottom:18px;}
-.dl-h2{font-size:16px;margin:0 0 12px;font-weight:700;}
+.dl-tab{flex:1 1 auto;font-family:inherit;font-size:14px;padding:9px 18px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;transition:background .2s, border-color .2s;}
+.dl-tab.on{color:#FFF1C5;border-color:var(--accent);background:rgba(212, 175, 55, 0.15);box-shadow:0 0 12px rgba(212, 175, 55, 0.2);font-weight:600;}
+.dl-card{background:var(--surface);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:16px;padding:clamp(18px,3.5vw,28px);margin-bottom:20px;box-shadow:0 12px 35px rgba(0,0,0,0.8), 0 0 20px rgba(212, 175, 55, 0.08);}
+.dl-h2{font-size:17px;margin:0 0 12px;font-weight:700;color:#FFF1C5;}
 .dl-error{color:#e6bcbc;border-color:#5a3a3a;}
 .dl-types{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:18px;}
 @media(min-width:640px){.dl-types{grid-template-columns:1fr 1fr;}}
 .dl-type{font-family:inherit;font-size:15px;text-align:left;padding:14px 16px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);cursor:pointer;}
-.dl-type.sel{border-color:var(--accent);background:#2c2c2c;}
+.dl-type.sel{border-color:var(--accent);background:rgba(212, 175, 55, 0.15);box-shadow:0 0 12px rgba(212, 175, 55, 0.2);font-weight:700;}
 .dl-type:disabled{opacity:.5;cursor:not-allowed;}
 .dl-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;}
-.dl-btn{font-family:inherit;font-size:15px;border-radius:10px;padding:12px 22px;cursor:pointer;border:1px solid var(--border);}
+.dl-btn{font-family:inherit;font-size:15px;border-radius:10px;padding:12px 22px;cursor:pointer;border:1px solid var(--border);transition:transform .15s, box-shadow .15s;}
 .dl-btn:disabled{opacity:.5;cursor:not-allowed;}
-.dl-primary{background:var(--accent);color:#111;border-color:var(--accent);font-weight:700;}
+.dl-primary{background:linear-gradient(135deg, #FFF1C5 0%, #D4AF37 50%, #AA771C 100%);color:#07070a;border-color:#D4AF37;font-weight:700;box-shadow:0 4px 20px rgba(212, 175, 55, 0.35);}
 .dl-ghost{background:transparent;color:var(--text);}
 .dl-status{display:flex;align-items:center;gap:12px;color:var(--muted);margin-top:14px;}
 .dl-spinner{width:20px;height:20px;border-radius:50%;border:2.5px solid var(--border);border-top-color:var(--accent);animation:dl-spin .8s linear infinite;}

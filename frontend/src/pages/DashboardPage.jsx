@@ -146,10 +146,10 @@ export default function DashboardPage() {
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap');
 
         .vfl-dash {
-          --ink:        #07070a;   /* obsidian background           */
-          --coal:       #111116;   /* card ground                   */
-          --graphite:   #1c1a14;   /* raised / hover surface        */
-          --seam:       rgba(212, 175, 55, 0.22); /* gold hairline borders */
+          --ink:        #06070a;   /* obsidian background           */
+          --coal:       rgba(18, 19, 26, 0.88);   /* card ground                   */
+          --graphite:   rgba(32, 33, 44, 0.95);   /* raised / hover surface        */
+          --seam:       rgba(212, 175, 55, 0.32); /* gold hairline borders */
           --ash:        #b8af94;   /* warm secondary text           */
           --bone:       #f8f5eb;   /* primary text, warm off-white  */
           --silver:     #f5d77f;   /* gold accent companion         */
@@ -159,7 +159,7 @@ export default function DashboardPage() {
           --serif-body:    'Lora', Georgia, serif;
 
           min-height: 100vh;
-          background: radial-gradient(circle at 50% 10%, #15140f 0%, #07070a 60%);
+          background: radial-gradient(ellipse at 50% 10%, #1e1a10 0%, #06070a 65%);
           color: var(--bone);
           font-family: var(--serif-body);
           -webkit-font-smoothing: antialiased;
@@ -255,18 +255,21 @@ export default function DashboardPage() {
         .vfl-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 1px;                    /* hairline gutters via background */
-          background: var(--seam);
-          border: 1px solid var(--seam);
+          gap: 18px;
+          background: transparent;
+          border: none;
         }
         @media (max-width: 1024px) { .vfl-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 560px)  { .vfl-grid { grid-template-columns: 1fr; } }
 
         .vfl-card {
           background: var(--coal);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid var(--seam);
+          border-radius: 16px;
           padding: 26px 24px 24px;
           text-align: left;
-          border: none;
           cursor: pointer;
           color: inherit;
           font-family: inherit;
@@ -274,19 +277,25 @@ export default function DashboardPage() {
           flex-direction: column;
           gap: 12px;
           min-height: 190px;
-          transition: background 220ms ease;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 15px rgba(212, 175, 55, 0.05);
+          transition: background 220ms ease, border-color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
           opacity: 0;
           transform: translateY(10px);
         }
         .is-mounted .vfl-card {
           opacity: 1;
           transform: none;
-          transition: background 220ms ease,
+          transition: background 220ms ease, border-color 220ms ease, box-shadow 220ms ease,
                       opacity 480ms ease var(--stagger, 0ms),
                       transform 480ms ease var(--stagger, 0ms);
         }
         .vfl-card:hover,
-        .vfl-card:focus-visible { background: var(--graphite); }
+        .vfl-card:focus-visible {
+          background: var(--graphite);
+          border-color: rgba(212, 175, 55, 0.65);
+          box-shadow: 0 18px 45px rgba(0, 0, 0, 0.9), 0 0 25px rgba(212, 175, 55, 0.22);
+          transform: translateY(-3px);
+        }
         .vfl-card:focus-visible {
           outline: 1px solid var(--silver);
           outline-offset: -1px;

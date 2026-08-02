@@ -75,34 +75,40 @@ export default function ForgotPasswordPage() {
 const styles = {
   page: {
     minHeight: '100vh', width: '100%',
-    background: 'radial-gradient(circle at 50% 30%, #17150e 0%, #08080a 70%)',
+    background: 'radial-gradient(ellipse at 50% 20%, #1c180e 0%, #08080c 75%)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontFamily: "'Cormorant Garamond', 'Calisto MT', Georgia, serif", padding: '1.5rem', boxSizing: 'border-box'
+    fontFamily: "'Cormorant Garamond', 'Lora', Georgia, serif", padding: '1.5rem', boxSizing: 'border-box'
   },
   card: {
-    width: '100%', maxWidth: '420px',
-    background: 'rgba(16, 16, 20, 0.85)',
-    backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-    border: '1px solid rgba(212, 175, 55, 0.3)', borderRadius: '16px',
-    padding: '2.5rem 2.25rem', boxShadow: '0 12px 40px rgba(0, 0, 0, 0.7), 0 0 20px rgba(212, 175, 55, 0.08)',
+    width: '100%', maxWidth: '430px',
+    background: 'rgba(14, 15, 22, 0.88)',
+    backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+    border: '1px solid rgba(212, 175, 55, 0.38)', borderRadius: '20px',
+    padding: '2.75rem 2.5rem', boxShadow: '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px rgba(212, 175, 55, 0.15)',
     display: 'flex', flexDirection: 'column'
   },
-  title: { color: '#f5d77f', fontSize: '2rem', fontWeight: '700', margin: 0, textAlign: 'center', letterSpacing: '0.04em' },
-  subtitle: { color: '#c5bc9c', fontSize: '0.95rem', textAlign: 'center', marginTop: '0.5rem', marginBottom: '2rem' },
-  label: { color: '#e5c158', fontSize: '0.85rem', marginBottom: '0.4rem' },
+  title: {
+    color: '#f5d77f',
+    background: 'linear-gradient(135deg, #FFF1C5 0%, #D4AF37 50%, #AA771C 100%)',
+    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+    fontSize: '2.2rem', fontWeight: '700', margin: 0, textAlign: 'center', letterSpacing: '0.04em',
+    filter: 'drop-shadow(0 2px 12px rgba(212, 175, 55, 0.3))'
+  },
+  subtitle: { color: '#b8af94', fontSize: '0.95rem', textAlign: 'center', marginTop: '0.5rem', marginBottom: '2rem' },
+  label: { color: '#f5d77f', fontSize: '0.85rem', marginBottom: '0.45rem', textTransform: 'uppercase', letterSpacing: '0.05em' },
   input: {
-    background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(212, 175, 55, 0.25)',
-    borderRadius: '8px', padding: '0.75rem 1rem', color: '#f8f6f0', fontSize: '1rem',
-    fontFamily: 'inherit', outline: 'none'
+    background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(212, 175, 55, 0.28)',
+    borderRadius: '10px', padding: '0.8rem 1.1rem', color: '#f8f6f0', fontSize: '1rem',
+    fontFamily: 'inherit', outline: 'none', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.5)'
   },
   button: {
-    marginTop: '2rem', padding: '0.85rem', borderRadius: '10px', border: 'none',
-    background: 'linear-gradient(135deg, #f5d77f 0%, #d4af37 50%, #b8860b 100%)', color: '#08080a', fontSize: '1rem',
-    fontWeight: '700', fontFamily: 'inherit', cursor: 'pointer', boxShadow: '0 4px 20px rgba(212, 175, 55, 0.3)'
+    marginTop: '2rem', padding: '0.9rem', borderRadius: '12px', border: 'none',
+    background: 'linear-gradient(135deg, #FFF1C5 0%, #D4AF37 50%, #AA771C 100%)', color: '#07070a', fontSize: '1.05rem',
+    fontWeight: '700', fontFamily: 'inherit', cursor: 'pointer', boxShadow: '0 6px 24px rgba(212, 175, 55, 0.35)'
   },
-  link: { marginTop: '1.25rem', textAlign: 'center', color: '#d4af37', fontSize: '0.9rem', textDecoration: 'none', opacity: 0.85 },
+  link: { marginTop: '1.35rem', textAlign: 'center', color: '#d4af37', fontSize: '0.9rem', textDecoration: 'none', opacity: 0.9 },
   error: {
-    background: 'rgba(212, 70, 70, 0.15)', border: '1px solid rgba(212, 70, 70, 0.4)',
-    color: '#ffa8a8', borderRadius: '8px', padding: '0.7rem 1rem', fontSize: '0.85rem', marginBottom: '0.5rem'
+    background: 'rgba(212, 70, 70, 0.15)', border: '1px solid rgba(212, 70, 70, 0.45)',
+    color: '#ffa8a8', borderRadius: '10px', padding: '0.75rem 1.1rem', fontSize: '0.85rem', marginBottom: '0.5rem'
   }
 };
