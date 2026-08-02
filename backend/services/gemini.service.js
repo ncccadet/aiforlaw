@@ -25,7 +25,11 @@ const axios = require('axios');
 // that mimics Gemini's response shape) — defaults to the real endpoint in
 // every real environment, staging and production included.
 const GEMINI_BASE = process.env.GEMINI_API_BASE || 'https://generativelanguage.googleapis.com/v1beta';
-const DEFAULT_MODEL = 'gemini-3.1-flash-lite';
+// Confirmed working model IDs from the Gemini API v1beta (verified 2026-08-02).
+// The originally configured 'gemini-3.1-flash-lite' does NOT exist — the correct
+// name is 'gemini-3.1-flash-lite-preview'. Set this as default since the project
+// was intended to use the 3.1 Flash Lite model family.
+const DEFAULT_MODEL = 'gemini-3.1-flash-lite-preview';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -49,20 +53,23 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * before giving up. Non-429 errors are never retried — those are real
  * failures (bad key, bad prompt, network issue), not a pacing problem.
  */
-async function generateText({ prompt, maxOutputTokens = 800, temperature = 0.2, timeoutMs = 20000, retries429 = 3 }) {
+async function generateText({ prompt, maxOutputTokens = 800, temperature = 0.2, timeoutMs = 15000, retries429 = 3 }) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY is not set — cannot call Gemini');
   }
 
   const requestedModel = process.env.GEMINI_MODEL || DEFAULT_MODEL;
+  // All models below are confirmed to exist in Gemini API v1beta (verified 2026-08-02).
+  // Ordered cheapest/fastest first. 'gemini-3.1-flash-lite' (without -preview) does NOT exist.
   const modelsToTry = Array.from(new Set([
     requestedModel,
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-1.5-flash',
-    'gemini-1.5-flash-8b',
-    'gemini-pro'
+    'gemini-3.1-flash-lite-preview',  // intended default for this project
+    'gemini-2.5-flash-lite',          // newer, also fast and cheap
+    'gemini-2.0-flash-lite',          // stable fallback
+    'gemini-2.5-flash',               // heavier but reliable
+    'gemini-2.0-flash',               // heavier fallback
+    'gemini-1.5-flash',               // last resort
   ]));
 
   let lastErr;
