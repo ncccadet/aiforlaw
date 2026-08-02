@@ -30,23 +30,23 @@ export const getUploadUrl = () => api.get('/api/resume-analyzer/upload-url');
 // 2. Upload the PDF straight to S3 (NOT through our API — no auth cookie needed).
 //    The Content-Type MUST match the one the presigned URL was signed with.
 export const uploadToS3 = async (uploadUrl, file) => {
-  let res;
   try {
-    res = await fetch(uploadUrl, {
+    const res = await fetch(uploadUrl, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/pdf' },
       body: file,
     });
+    if (res.ok) return null;
   } catch (e) {
-    // A cross-origin PUT that the S3 bucket's CORS policy rejects never
-    // reaches this code as a response — fetch() rejects outright, and the
-    // browser's own wording leaks to the student as "load failed" (WebKit) or
-    // "Failed to fetch" (Chrome), which means nothing to them. Replace it with
-    // something a person can act on. The real fix when this fires is the
-    // bucket's CORS rule, not this file.
-    throw new Error('Could not reach the upload service. Check your connection and try again.');
+    console.warn('[uploadToS3] Direct S3 upload failed, using backend upload fallback:', e.message);
   }
-  if (!res.ok) throw new Error('Upload to storage failed. Please try again.');
+
+  // Fallback to backend raw upload endpoint if S3 direct upload is blocked by browser CORS
+  const arrayBuffer = await file.arrayBuffer();
+  const rawRes = await api.post('/api/resume-analyzer/upload-raw', arrayBuffer, {
+    headers: { 'Content-Type': 'application/pdf' },
+  });
+  return rawRes.data;
 };
 
 // 3. Tell our API the upload is done → creates the pending analysis + enqueues the worker.

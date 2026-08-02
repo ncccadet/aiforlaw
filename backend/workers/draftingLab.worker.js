@@ -118,7 +118,7 @@ const runGenerateCase = async (job) => {
   if (tin || tout) logUsage(user_id, college_id, model, tin, tout);
 
   if (!parsed) {
-    await pool.query(`UPDATE sessions SET status='failed' WHERE session_id=$1`, [sessionId]);
+    await pool.query(`UPDATE sessions SET status='failed' WHERE session_id=$1 AND status='preparing'`, [sessionId]);
     throw lastErr || new Error('drafting_lab: unparseable model output (generate-case)');
   }
 

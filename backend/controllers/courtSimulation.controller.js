@@ -103,6 +103,34 @@ const getCaseTypes = (_req, res) => {
   });
 };
 
+const safeParseJson = (text) => {
+  if (!text) return null;
+  let str = String(text).trim();
+  str = str.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+
+  const sObj = str.indexOf('{'), sArr = str.indexOf('[');
+  let start = -1, end = -1;
+  if (sObj !== -1 && (sArr === -1 || sObj < sArr)) {
+    start = sObj; end = str.lastIndexOf('}');
+  } else if (sArr !== -1) {
+    start = sArr; end = str.lastIndexOf(']');
+  }
+
+  if (start === -1 || end === -1 || end <= start) return null;
+  const snippet = str.slice(start, end + 1);
+
+  try {
+    return JSON.parse(snippet);
+  } catch (e1) {
+    try {
+      const fixed = snippet.replace(/[\r\n\t]/g, (m) => (m === '\n' ? '\\n' : m === '\r' ? '\\r' : '\\t'));
+      return JSON.parse(fixed);
+    } catch (e2) {
+      return null;
+    }
+  }
+};
+
 const generateCaseDirectly = async (sessionId, fieldLabel, position, level, studentName, user_id, college_id, existingFilters) => {
   try {
     const prompt = `You are a senior advocate and judicial clerk in an Indian High Court.
@@ -127,12 +155,7 @@ Return ONLY valid JSON with no markdown fences:
       temperature: 0.3,
     });
 
-    const cleaned = String(text).replace(/```json/gi, '').replace(/```/g, '').trim();
-    const sIdx = cleaned.indexOf('{'), eIdx = cleaned.lastIndexOf('}');
-    let parsed = {};
-    if (sIdx !== -1 && eIdx !== -1 && eIdx > sIdx) {
-      try { parsed = JSON.parse(cleaned.slice(sIdx, eIdx + 1)); } catch (e) {}
-    }
+    const parsed = safeParseJson(text) || {};
 
     const updatedFilters = {
       ...(existingFilters || {}),
@@ -148,12 +171,22 @@ Return ONLY valid JSON with no markdown fences:
     );
 
     logUsage(user_id, college_id, process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite', tokensIn, tokensOut);
+    return updatedFilters;
   } catch (err) {
     console.error('[courtSimulation] Direct generation error:', err.message);
+    const fallbackFilters = {
+      ...(existingFilters || {}),
+      brief: `IN THE HIGH COURT OF JUDICATURE\nMatter: ${fieldLabel} (${level.toUpperCase()})\nPosition: ${position}\nStudent: ${studentName || 'Advocate'}\n\nFACTS OF THE CASE:\n1. The present matter arises out of a dispute concerning statutory rights and liabilities under the relevant legal provisions of Indian Law.\n2. The petitioner/prosecution alleges substantial non-compliance and legal injury resulting from the actions of the respondent.\n3. The opposing side contends that all actions were taken within full compliance of procedural and substantive laws.\n\nISSUES FOR ARGUMENT:\n- Whether the present petition/appeal is maintainable under law.\n- Whether the actions of the respondent constitute a violation of statutory duty.`,
+      title: `${fieldLabel} Practice Case`,
+      judgeName: 'Hon\'ble Bench',
+      oppCounselName: 'Opposing Counsel',
+    };
+
     await pool.query(
-      `UPDATE sessions SET status = 'failed' WHERE session_id = $1`,
-      [sessionId]
+      `UPDATE sessions SET status = 'active', filters = $1 WHERE session_id = $2`,
+      [JSON.stringify(fallbackFilters), sessionId]
     ).catch(() => {});
+    return fallbackFilters;
   }
 };
 
@@ -179,22 +212,19 @@ const startSession = async (req, res, next) => {
     );
     const sessionId = rows[0].session_id;
 
-    // Trigger direct generation in background (100% reliable)
-    generateCaseDirectly(sessionId, def.label, position, level, studentName, user_id, college_id, filters).catch((e) => {
-      console.error('[courtSimulation] direct case gen failed:', e.message);
+    // Fast direct case generation
+    const finalFilters = await generateCaseDirectly(sessionId, def.label, position, level, studentName, user_id, college_id, filters);
+
+    res.status(200).json({
+      sessionId,
+      status: 'active',
+      fieldOfLaw,
+      label: def.label,
+      position,
+      level,
+      brief: finalFilters.brief,
+      title: finalFilters.title
     });
-
-    try {
-      await courtQueue.add(
-        'generate-case',
-        { sessionId, fieldLabel: def.label, position, level, studentName, user_id, college_id, existingFilters: filters },
-        { removeOnComplete: 100, removeOnFail: 100, attempts: 1 }
-      );
-    } catch (qErr) {
-      console.warn('[courtSimulation] BullMQ queue add ignored:', qErr.message);
-    }
-
-    res.status(202).json({ sessionId, status: 'preparing', fieldOfLaw, label: def.label, position, level });
   } catch (err) { next(err); }
 };
 

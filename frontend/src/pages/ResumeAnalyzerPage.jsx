@@ -166,11 +166,17 @@ function ResumeAnalyzerFeature() {
     try {
       setPhase('uploading');
       const { data: presigned } = await getUploadUrl();
-      await uploadToS3(presigned.uploadUrl, file);
-      setPhase('analyzing');
-      const { data: job } = await analyze(presigned.s3Key);
-      setCurrentDocId(job.docId);
-      beginPolling(job.docId);
+      const fallbackData = await uploadToS3(presigned.uploadUrl, file);
+      if (fallbackData && fallbackData.docId) {
+        setCurrentDocId(fallbackData.docId);
+        setPhase('analyzing');
+        beginPolling(fallbackData.docId);
+      } else {
+        setPhase('analyzing');
+        const { data: job } = await analyze(presigned.s3Key);
+        setCurrentDocId(job.docId);
+        beginPolling(job.docId);
+      }
     } catch (e) {
       setPhase('failed');
       setFailMessage(

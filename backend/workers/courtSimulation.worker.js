@@ -30,6 +30,34 @@ Return ONLY valid JSON with no markdown fences:
 }
 `;
 
+const safeParseJson = (text) => {
+  if (!text) return null;
+  let str = String(text).trim();
+  str = str.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+
+  const sObj = str.indexOf('{'), sArr = str.indexOf('[');
+  let start = -1, end = -1;
+  if (sObj !== -1 && (sArr === -1 || sObj < sArr)) {
+    start = sObj; end = str.lastIndexOf('}');
+  } else if (sArr !== -1) {
+    start = sArr; end = str.lastIndexOf(']');
+  }
+
+  if (start === -1 || end === -1 || end <= start) return null;
+  const snippet = str.slice(start, end + 1);
+
+  try {
+    return JSON.parse(snippet);
+  } catch (e1) {
+    try {
+      const fixed = snippet.replace(/[\r\n\t]/g, (m) => (m === '\n' ? '\\n' : m === '\r' ? '\\r' : '\\t'));
+      return JSON.parse(fixed);
+    } catch (e2) {
+      return null;
+    }
+  }
+};
+
 const processJob = async (job) => {
   const { sessionId, fieldLabel, position, level, studentName, user_id, college_id, existingFilters } = job.data;
 
@@ -41,13 +69,11 @@ const processJob = async (job) => {
       temperature: 0.3,
     });
 
-    const cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-    const sIdx = cleaned.indexOf('{'), eIdx = cleaned.lastIndexOf('}');
-    const parsed = JSON.parse(cleaned.slice(sIdx, eIdx + 1));
+    const parsed = safeParseJson(text) || {};
 
     const updatedFilters = {
       ...(existingFilters || {}),
-      brief: parsed.facts || '',
+      brief: parsed.facts || text || 'Detailed case brief prepared for hearing.',
       title: parsed.title || `${fieldLabel} Matter`,
       judgeName: parsed.judgeName || 'Hon\'ble Bench',
       oppCounselName: parsed.oppCounselName || 'Opposing Counsel',
@@ -67,7 +93,7 @@ const processJob = async (job) => {
   } catch (err) {
     console.error(`[courtSimulation.worker] Job ${job?.id} failed:`, err.message);
     await pool.query(
-      `UPDATE sessions SET status = 'failed' WHERE session_id = $1`,
+      `UPDATE sessions SET status = 'failed' WHERE session_id = $1 AND status = 'preparing'`,
       [sessionId]
     ).catch(() => {});
     throw err;

@@ -290,6 +290,34 @@ const getOptions = (_req, res) => {
   res.json({ types: Object.keys(DRAFT_TYPES).map((id) => ({ id, label: DRAFT_TYPES[id].label })) });
 };
 
+const safeParseJson = (text) => {
+  if (!text) return null;
+  let str = String(text).trim();
+  str = str.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+
+  const sObj = str.indexOf('{'), sArr = str.indexOf('[');
+  let start = -1, end = -1;
+  if (sObj !== -1 && (sArr === -1 || sObj < sArr)) {
+    start = sObj; end = str.lastIndexOf('}');
+  } else if (sArr !== -1) {
+    start = sArr; end = str.lastIndexOf(']');
+  }
+
+  if (start === -1 || end === -1 || end <= start) return null;
+  const snippet = str.slice(start, end + 1);
+
+  try {
+    return JSON.parse(snippet);
+  } catch (e1) {
+    try {
+      const fixed = snippet.replace(/[\r\n\t]/g, (m) => (m === '\n' ? '\\n' : m === '\r' ? '\\r' : '\\t'));
+      return JSON.parse(fixed);
+    } catch (e2) {
+      return null;
+    }
+  }
+};
+
 const generateCaseStudyDirectly = async (sessionId, template_type, label, user_id, college_id) => {
   try {
     const prompt = `You are a senior Indian advocate guiding a junior lawyer.
@@ -308,17 +336,12 @@ Return ONLY valid JSON with no markdown fences:
       temperature: 0.3,
     });
 
-    const cleaned = String(text).replace(/```json/gi, '').replace(/```/g, '').trim();
-    const sIdx = cleaned.indexOf('{'), eIdx = cleaned.lastIndexOf('}');
-    let parsed = {};
-    if (sIdx !== -1 && eIdx !== -1 && eIdx > sIdx) {
-      try { parsed = JSON.parse(cleaned.slice(sIdx, eIdx + 1)); } catch (e) {}
-    }
+    const parsed = safeParseJson(text) || {};
 
     const filters = {
       template_type,
       title: parsed.title || `${label} Case Study`,
-      facts: parsed.facts || text || 'Factual background for drafting practice.',
+      facts: parsed.facts || text || `Factual scenario prepared for drafting a ${label}. Fill out all compulsory fields accurately.`,
       task: parsed.task || `Draft a complete ${label} based on the above facts.`,
     };
 
@@ -332,12 +355,22 @@ Return ONLY valid JSON with no markdown fences:
        VALUES ($1,$2,'drafting_lab',$3,$4,$5)`,
       [user_id, college_id, process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite', tokensIn, tokensOut]
     ).catch(() => {});
+
+    return filters;
   } catch (err) {
     console.error('[draftingLab] Direct case study gen error:', err.message);
+    const fallbackFilters = {
+      template_type,
+      title: `${label} Practice Case Study`,
+      facts: `FACTUAL SCENARIO FOR ${label.toUpperCase()}:\n\n1. The deponent/applicant is a resident of Maharashtra and seeks formal legal drafting for court submission.\n2. All relevant particulars including date, place, names of parties, and relief claimed must be inserted into the specified placeholders.\n3. Review relevant procedural rules under Indian Law before finalizing the draft.`,
+      task: `Complete the ${label} draft using the provided form fields.`,
+    };
+
     await pool.query(
-      `UPDATE sessions SET status = 'failed' WHERE session_id = $1`,
-      [sessionId]
+      `UPDATE sessions SET status = 'active', filters = $1 WHERE session_id = $2`,
+      [JSON.stringify(fallbackFilters), sessionId]
     ).catch(() => {});
+    return fallbackFilters;
   }
 };
 
@@ -359,22 +392,17 @@ const startCaseStudy = async (req, res, next) => {
     );
     const sessionId = rows[0].session_id;
 
-    // Trigger direct case study generation in background (100% reliable)
-    generateCaseStudyDirectly(sessionId, template_type, DRAFT_TYPES[template_type].label, user_id, college_id).catch((e) => {
-      console.error('[draftingLab] direct case study gen failed:', e.message);
+    // Fast direct case study generation
+    const finalFilters = await generateCaseStudyDirectly(sessionId, template_type, DRAFT_TYPES[template_type].label, user_id, college_id);
+
+    res.status(200).json({
+      docId: sessionId,
+      status: 'active',
+      template_type,
+      title: finalFilters.title,
+      facts: finalFilters.facts,
+      task: finalFilters.task
     });
-
-    try {
-      await draftQueue.add(
-        'generate-case',
-        { sessionId, template_type, label: DRAFT_TYPES[template_type].label, user_id, college_id },
-        { removeOnComplete: 100, removeOnFail: 100, attempts: 1 }
-      );
-    } catch (qErr) {
-      console.warn('[draftingLab] BullMQ queue add ignored:', qErr.message);
-    }
-
-    res.status(202).json({ docId: sessionId, status: 'preparing' });
   } catch (err) { next(err); }
 };
 

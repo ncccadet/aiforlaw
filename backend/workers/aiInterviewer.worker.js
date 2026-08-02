@@ -91,7 +91,7 @@ const processJob = async (job) => {
   }
 
   if (!questions || questions.length === 0) {
-    await pool.query(`UPDATE sessions SET status='failed' WHERE session_id=$1`, [sessionId]);
+    await pool.query(`UPDATE sessions SET status='failed' WHERE session_id=$1 AND status='preparing'`, [sessionId]);
     throw lastErr || new Error('ai_interviewer: no questions generated');
   }
 

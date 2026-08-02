@@ -11,6 +11,7 @@ const router = express.Router();
 const { authMiddleware } = require('../middleware/auth.middleware');
 const {
   getUploadUrl,
+  uploadRaw,
   analyzeResume,
   getResult,
   getHistory,
@@ -18,6 +19,7 @@ const {
 } = require('../controllers/resumeAnalyzer.controller');
 
 router.get('/upload-url',     authMiddleware, getUploadUrl);
+router.post('/upload-raw',    authMiddleware, express.raw({ type: 'application/pdf', limit: '10mb' }), uploadRaw);
 router.post('/analyze',       authMiddleware, analyzeResume);
 router.get('/result/:docId',  authMiddleware, getResult);
 router.get('/history',        authMiddleware, getHistory);

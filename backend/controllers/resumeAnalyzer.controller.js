@@ -64,6 +64,40 @@ const getUploadUrl = async (req, res, next) => {
   }
 };
 
+const uploadRaw = async (req, res, next) => {
+  try {
+    const { user_id, college_id } = req.user;
+    const pdfBuffer = req.body;
+    if (!pdfBuffer || !Buffer.isBuffer(pdfBuffer) || pdfBuffer.length < 100) {
+      return res.status(400).json({ error: 'Valid PDF file required.' });
+    }
+
+    const key = `${ownerPrefix(college_id, user_id)}${crypto.randomUUID()}.pdf`;
+
+    await s3.putObject({
+      Bucket: BUCKET,
+      Key: key,
+      Body: pdfBuffer,
+      ContentType: 'application/pdf',
+    }).promise();
+
+    const { rows } = await queryAsCollege(
+      college_id,
+      `INSERT INTO documents (user_id, college_id, feature_name, s3_key, status)
+       VALUES ($1, $2, 'resume_analyzer', $3, 'pending')
+       RETURNING doc_id`,
+      [user_id, college_id, key]
+    );
+    const docId = rows[0].doc_id;
+
+    processResumeJob({ data: { docId, s3Key: key, user_id, college_id }, id: docId }).catch((err) => {
+      console.error('[resumeAnalyzer] raw upload processJob note:', err.message);
+    });
+
+    res.json({ docId, status: 'pending', s3Key: key });
+  } catch (err) { next(err); }
+};
+
 const { processJob: processResumeJob } = require('../workers/resumeAnalyzer.worker');
 
 /**
@@ -245,4 +279,4 @@ const getReportUrl = async (req, res, next) => {
   }
 };
 
-module.exports = { getUploadUrl, analyzeResume, getResult, getHistory, getReportUrl };
+module.exports = { getUploadUrl, uploadRaw, analyzeResume, getResult, getHistory, getReportUrl };

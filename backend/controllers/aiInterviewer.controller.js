@@ -132,7 +132,42 @@ const getInterviewOptions = (_req, res) => {
   });
 };
 
+const safeParseJson = (text) => {
+  if (!text) return null;
+  let str = String(text).trim();
+  str = str.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+
+  const sObj = str.indexOf('{'), sArr = str.indexOf('[');
+  let start = -1, end = -1;
+  if (sObj !== -1 && (sArr === -1 || sObj < sArr)) {
+    start = sObj; end = str.lastIndexOf('}');
+  } else if (sArr !== -1) {
+    start = sArr; end = str.lastIndexOf(']');
+  }
+
+  if (start === -1 || end === -1 || end <= start) return null;
+  const snippet = str.slice(start, end + 1);
+
+  try {
+    return JSON.parse(snippet);
+  } catch (e1) {
+    try {
+      const fixed = snippet.replace(/[\r\n\t]/g, (m) => (m === '\n' ? '\\n' : m === '\r' ? '\\r' : '\\t'));
+      return JSON.parse(fixed);
+    } catch (e2) {
+      return null;
+    }
+  }
+};
+
 const generateQuestionsDirectly = async (sessionId, difficulty, role, resumeContext, user_id, college_id) => {
+  const fallbackQuestions = [
+    `Welcome to the ${role} interview (${difficulty.toUpperCase()} level). Could you summarize your key legal experience and background?`,
+    `What key statutory provisions or precedents under Indian law do you rely on most frequently when analyzing a dispute in ${role}?`,
+    `Describe a complex procedural or substantive legal issue relevant to ${role} and how you would advise a client on it.`,
+    `How do you evaluate legal risks and ethical duties when faced with conflicting instructions in a high-stakes matter?`
+  ];
+
   try {
     const tier = TIER[difficulty] || TIER.easy;
     const prompt = `You are a senior hiring partner at a top Indian law firm interviewing a candidate for the role: ${role}.
@@ -155,20 +190,10 @@ Return ONLY valid JSON with no markdown fences:
       temperature: 0.3,
     });
 
-    const cleaned = String(text).replace(/```json/gi, '').replace(/```/g, '').trim();
-    const sIdx = cleaned.indexOf('{'), eIdx = cleaned.lastIndexOf('}');
-    let parsed = { questions: [] };
-    if (sIdx !== -1 && eIdx !== -1 && eIdx > sIdx) {
-      try { parsed = JSON.parse(cleaned.slice(sIdx, eIdx + 1)); } catch (e) {}
-    }
-
+    const parsed = safeParseJson(text) || {};
     const questionsList = Array.isArray(parsed.questions) && parsed.questions.length > 0
       ? parsed.questions
-      : [
-          `Welcome to the ${role} interview. Could you summarize your key legal experience and background?`,
-          `What key statutory provisions or precedents do you rely on most frequently when analyzing a dispute in ${role}?`,
-          `Describe a challenging legal problem you faced recently and how you resolved it.`
-        ];
+      : fallbackQuestions;
 
     await pool.query(
       `UPDATE sessions SET status = 'active', questions = $1 WHERE session_id = $2`,
@@ -176,12 +201,14 @@ Return ONLY valid JSON with no markdown fences:
     );
 
     logUsage(user_id, college_id, process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite', tokensIn, tokensOut);
+    return questionsList;
   } catch (err) {
     console.error('[aiInterviewer] Direct question gen error:', err.message);
     await pool.query(
-      `UPDATE sessions SET status = 'failed' WHERE session_id = $1`,
-      [sessionId]
+      `UPDATE sessions SET status = 'active', questions = $1 WHERE session_id = $2`,
+      [JSON.stringify(fallbackQuestions), sessionId]
     ).catch(() => {});
+    return fallbackQuestions;
   }
 };
 
@@ -208,22 +235,16 @@ const startInterview = async (req, res, next) => {
     );
     const sessionId = rows[0].session_id;
 
-    // Trigger direct question generation in background (100% reliable)
-    generateQuestionsDirectly(sessionId, difficulty, role, resumeContext, user_id, college_id).catch((e) => {
-      console.error('[aiInterviewer] direct question gen failed:', e.message);
+    // Fast direct question generation
+    const questions = await generateQuestionsDirectly(sessionId, difficulty, role, resumeContext, user_id, college_id);
+
+    res.status(200).json({
+      sessionId,
+      status: 'active',
+      difficulty,
+      role,
+      questions
     });
-
-    try {
-      await interviewQueue.add(
-        'generate-questions',
-        { sessionId, difficulty, role, resumeContext, user_id, college_id },
-        { removeOnComplete: 100, removeOnFail: 100, attempts: 1 }
-      );
-    } catch (qErr) {
-      console.warn('[aiInterviewer] BullMQ queue add ignored:', qErr.message);
-    }
-
-    res.status(202).json({ sessionId, status: 'preparing', difficulty, role });
   } catch (err) { next(err); }
 };
 
