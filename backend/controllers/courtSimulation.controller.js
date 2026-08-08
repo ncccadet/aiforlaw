@@ -117,19 +117,32 @@ const safeParseJson = (text) => {
     start = sArr; end = str.lastIndexOf(']');
   }
 
-  if (start === -1 || end === -1 || end <= start) return null;
-  const snippet = str.slice(start, end + 1);
-
-  try {
-    return JSON.parse(snippet);
-  } catch (e1) {
+  if (start !== -1 && end !== -1 && end > start) {
+    const snippet = str.slice(start, end + 1);
     try {
-      const fixed = snippet.replace(/[\r\n\t]/g, (m) => (m === '\n' ? '\\n' : m === '\r' ? '\\r' : '\\t'));
-      return JSON.parse(fixed);
-    } catch (e2) {
-      return null;
+      return JSON.parse(snippet);
+    } catch (e1) {
+      try {
+        const fixed = snippet.replace(/[\r\n\t]/g, (m) => (m === '\n' ? '\\n' : m === '\r' ? '\\r' : '\\t'));
+        return JSON.parse(fixed);
+      } catch (e2) {}
     }
   }
+
+  // Regex fallback if JSON.parse failed due to unescaped quotes or malformed JSON syntax
+  const oppositionMatch = text.match(/"opposition"\s*:\s*"([\s\S]*?)"(?=\s*,\s*"|\s*})/i);
+  const judgeMatch = text.match(/"judge"\s*:\s*"([\s\S]*?)"(?=\s*,\s*"|\s*})/i);
+  const concludedMatch = text.match(/"concluded"\s*:\s*(true|false)/i);
+
+  if (oppositionMatch || judgeMatch) {
+    return {
+      opposition: oppositionMatch ? oppositionMatch[1].replace(/\\"/g, '"').trim() : undefined,
+      judge: judgeMatch ? judgeMatch[1].replace(/\\"/g, '"').trim() : undefined,
+      concluded: concludedMatch ? concludedMatch[1].toLowerCase() === 'true' : false,
+    };
+  }
+
+  return null;
 };
 
 const generateCaseDirectly = async (sessionId, fieldLabel, position, level, studentName, user_id, college_id, existingFilters) => {
@@ -317,8 +330,8 @@ Return STRICT JSON only: { "opposition": "...", "judge": "...", "concluded": <bo
     if (tin || tout) logUsage(user_id, cid, model, tin, tout);
 
     // Fallback so a partial Gemini response never breaks the turn
-    const opposition = clampWords(parsed.opposition || 'The opposing counsel objects and requests the court to note the student\'s position for further argument.', OPPOSITION_MAX_WORDS);
-    const judge = clampWords(parsed.judge || 'Please proceed, counsel.', JUDGE_MAX_WORDS);
+    const opposition = clampWords(parsed.opposition || `The opposing counsel strongly objects to the ${f.position}'s statement and requests the Court to note that no statutory basis has been established.`, OPPOSITION_MAX_WORDS);
+    const judge = clampWords(parsed.judge || `The Court notes the argument. Counsel for ${f.position}, proceed with your legal points.`, JUDGE_MAX_WORDS);
     const concluded = forcedConclude || parsed.concluded === true;
 
     turns.push({ student: statement, opposition, judge, voiceLevel, durationSec, wordCount });
