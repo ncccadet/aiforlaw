@@ -162,29 +162,61 @@ const hasSuspiciousPdfSignals = (buffer) => {
   return SUSPICIOUS_PDF_SIGNALS.some((sig) => raw.includes(sig));
 };
 
-const buildPrompt = (resumeText) => `You are an expert legal-careers résumé reviewer for Indian law students and legal professionals.
-Analyse the résumé text between the <resume> tags against strict Indian legal industry standards.
+const buildPrompt = (resumeText) => `You are a senior partner and legal recruitment expert evaluating an Indian law candidate's résumé against tier-1 law firm, judicial chamber, and corporate legal department hiring criteria.
 
-First decide whether the document actually is a résumé / CV (not an invoice, letter,
-notes, article, or any other document). If it is NOT a résumé, respond with EXACTLY:
+Analyse the résumé text between the <resume> tags.
+
+First decide whether the document actually is a résumé / CV (not an invoice, letter, notes, article, court brief, or non-CV document). If it is NOT a résumé, respond with EXACTLY:
 {"isResume": false, "reason": "<short reason>"}
 
-If it IS a résumé, score it on these SEVEN parameters, evaluating key Indian law points (such as Moot Courts, Legal Drafting, Judicial/Chamber/Law Firm Internships, Legal Research Databases like SCC Online/Manupatra, and knowledge of BNS/BNSS/BSA 2023 & statutory acts):
+If it IS a résumé, evaluate and score it on these SEVEN parameters in this exact order:
 ${PARAMETERS.map((p, i) => `${i + 1}. ${p}`).join('\n')}
 
-Respond with STRICT JSON only (no markdown, no prose) in this shape:
+Specific Legal Points & Criteria to check across parameters:
+1. Legal Experience & Internships:
+   - Chamber experience under Senior Advocates / Advocates-on-Record (AoR) in Supreme Court, High Courts, or District Courts.
+   - Tier-1 / Tier-2 Corporate Law Firm internships (M&A, PE, Corporate Advisory, General Corporate).
+   - In-house corporate legal department or PSU legal wing experience.
+   - Judicial clerkships / research assistantships under Hon'ble Judges.
+
+2. Legal Drafting & Courtroom Documentation:
+   - Drafting of Writs, Plaints, Written Statements, Bail Applications, PILs, Interim Applications, Vakalatnamas, and Affidavits.
+   - Transactional drafting: Commercial Contracts, NDAs, Shareholder Agreements, Due Diligence Reports, Title Reports.
+
+3. Statutory Knowledge & Procedural Mastery:
+   - New Criminal Laws: Bharatiya Nagarik Suraksha Sanhita (BNSS 2023), Bharatiya Nyaya Sanhita (BNS 2023), Bharatiya Sakshya Adhiniyam (BSA 2023).
+   - Core Statutory Laws: CPC, CrPC, IPC, Indian Contract Act, Evidence Act, Constitution of India, Arbitration & Conciliation Act, Companies Act 2013, IBC 2016, DPDP Act 2023, IPR (Trademarks/Patents/Copyrights).
+
+4. Legal Research & Tools:
+   - Mastery of legal research databases: SCC Online, Manupatra, LexisNexis, Westlaw, LiveLaw, Bar & Bench, Taxmann, Indian Kanoon.
+   - Case law research, ratio decidendi extraction, legislative tracking, and statutory interpretation.
+
+5. Co-Curricular Legal Achievements & Standing:
+   - State Bar Council Enrollment / All India Bar Examination (AIBE) qualification.
+   - Moot Court Competitions (National / International - Winner, Runner Up, Best Speaker, Best Memorial).
+   - Legal Aid Clinic participation, Pro Bono work, Legal Literacy Camps.
+   - Publications in UGC-CARE, Scopus, or peer-reviewed law journals; paper presentations at legal conferences.
+
+Respond with STRICT JSON only (no markdown code blocks, no prose wrapper) in this exact shape:
 {
   "isResume": true,
   "overallScore": <integer 0-100>,
-  "summary": "<one or two sentence overall impression highlighting legal domain strengths>",
+  "summary": "<two or three sentence legal-career assessment highlighting key practice strengths and areas for growth>",
   "parameters": [
-    { "name": "<one of the 7 names, exact>", "score": <integer 0-100>,
-      "strengths": ["<short law point / strength>", "..."],
-      "improvements": ["<specific, actionable law-resume improvement>", "..."] }
+    {
+      "name": "<one of the 7 parameter names, exact>",
+      "score": <integer 0-100>,
+      "strengths": ["<specific legal strength / point found>", "..."],
+      "improvements": ["<specific, actionable legal improvement point>", "..."]
+    }
   ]
 }
-Rules: exactly 7 objects in "parameters", names exactly as listed and in order.
-1-3 bullet points per list. Evaluate specifically for law careers (chambers, law firms, corporate legal teams, litigation). Keep response under ${MAX_OUTPUT_TOKENS} tokens.
+
+Rules:
+- Exactly 7 parameter objects, with names matching the exact order listed above.
+- 1 to 3 concise, highly relevant legal bullet points per list.
+- Provide actionable guidance for Indian law practice (litigation, corporate law, ADR, regulatory compliance).
+- Keep total response under ${MAX_OUTPUT_TOKENS} tokens.
 
 <resume>
 ${resumeText}
