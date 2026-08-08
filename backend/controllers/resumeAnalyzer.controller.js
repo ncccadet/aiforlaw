@@ -33,6 +33,7 @@ const resumeQueue = new Queue('resume-analysis', {
 const s3 = new AWS.S3({
   region: process.env.AWS_REGION,
   signatureVersion: 'v4',
+  sslEnabled: true,
 });
 const BUCKET = process.env.S3_BUCKET_FILES;
 

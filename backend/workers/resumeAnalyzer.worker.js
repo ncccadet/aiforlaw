@@ -107,7 +107,7 @@ const pool = new Pool({
   max: 5,
 });
 
-const s3 = new AWS.S3({ region: process.env.AWS_REGION, signatureVersion: 'v4' });
+const s3 = new AWS.S3({ region: process.env.AWS_REGION, signatureVersion: 'v4', sslEnabled: true });
 const BUCKET = process.env.S3_BUCKET_FILES;
 
 // Matches gemini.service.js's DEFAULT_MODEL and the project contract — never

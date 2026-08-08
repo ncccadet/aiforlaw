@@ -67,6 +67,7 @@ const processJob = async (job) => {
       prompt,
       maxOutputTokens: 1500,
       temperature: 0.3,
+      timeoutMs: 30000,
     });
 
     const parsed = safeParseJson(text) || {};

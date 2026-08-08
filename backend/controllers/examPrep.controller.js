@@ -33,7 +33,7 @@ const AWS = require('aws-sdk');
 const { pool, queryAsCollege } = require('../config/db');
 const { generateText } = require('../services/gemini.service');
 
-const s3 = new AWS.S3({ region: process.env.AWS_REGION, signatureVersion: 'v4' });
+const s3 = new AWS.S3({ region: process.env.AWS_REGION, signatureVersion: 'v4', sslEnabled: true });
 const BUCKET = process.env.S3_BUCKET_FILES;
 
 const DISCLAIMER = 'For educational purposes only. Verify with a qualified advocate.';

@@ -28,7 +28,7 @@ require('dotenv').config();
 const https = require('https');
 const AWS = require('aws-sdk');
 
-const s3 = new AWS.S3({ region: process.env.AWS_REGION, signatureVersion: 'v4' });
+const s3 = new AWS.S3({ region: process.env.AWS_REGION, signatureVersion: 'v4', sslEnabled: true });
 const BUCKET = process.env.S3_BUCKET_FILES;
 
 // Each source URL was manually verified downloadable (2026-07-23) by the

@@ -16,6 +16,7 @@ const pool = new Pool({
 const s3 = new AWS.S3({
   region: process.env.AWS_REGION,
   signatureVersion: 'v4',
+  sslEnabled: true,
 });
 
 const PDFDocument = require('pdfkit');

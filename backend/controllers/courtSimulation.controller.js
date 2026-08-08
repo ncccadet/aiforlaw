@@ -154,6 +154,7 @@ Return ONLY valid JSON with no markdown fences:
       prompt,
       maxOutputTokens: 1500,
       temperature: 0.3,
+      timeoutMs: 30000,
     });
 
     const parsed = safeParseJson(text) || {};
@@ -305,14 +306,15 @@ Return STRICT JSON only: { "opposition": "...", "judge": "...", "concluded": <bo
 
     let parsed, tin = 0, tout = 0, model;
     try {
-      const out = await generateText({ prompt: cap(prompt, TURN_IN_CAP), maxOutputTokens: TURN_OUT_CAP, temperature: 0.7 });
+      const out = await generateText({ prompt: cap(prompt, TURN_IN_CAP), maxOutputTokens: TURN_OUT_CAP, temperature: 0.7, timeoutMs: 30000 });
       tin = out.tokensIn; tout = out.tokensOut; model = out.model;
       parsed = safeParseJson(out.text) || {};
     } catch (e) {
+      console.error('[courtSimulation] Turn generation error:', e.message);
       if (tin || tout) logUsage(user_id, cid, model, tin, tout);
-      return res.status(502).json({ error: 'The court could not respond. Please try again.' });
+      parsed = {};
     }
-    logUsage(user_id, cid, model, tin, tout);
+    if (tin || tout) logUsage(user_id, cid, model, tin, tout);
 
     // Fallback so a partial Gemini response never breaks the turn
     const opposition = clampWords(parsed.opposition || 'The opposing counsel objects and requests the court to note the student\'s position for further argument.', OPPOSITION_MAX_WORDS);
@@ -379,7 +381,7 @@ never invent facts; up to 5 items each in strengths/weaknesses/improvements; kee
 
     let parsed, tin = 0, tout = 0, model;
     try {
-      const out = await generateText({ prompt: cap(prompt, FINISH_IN_CAP), maxOutputTokens: FINISH_OUT_CAP, temperature: 0.4 });
+      const out = await generateText({ prompt: cap(prompt, FINISH_IN_CAP), maxOutputTokens: FINISH_OUT_CAP, temperature: 0.4, timeoutMs: 30000 });
       tin = out.tokensIn; tout = out.tokensOut; model = out.model;
       parsed = safeParseJson(out.text) || {};
     } catch (e) {

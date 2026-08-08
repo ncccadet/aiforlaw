@@ -46,7 +46,7 @@ const resumeBuilderQueue = new Queue('resume-builder', { connection: require('..
 // as a confusing "No Access-Control-Allow-Origin header" preflight failure
 // on the photo-upload PUT, not as a signature error. Matches the working
 // s3 client in resumeAnalyzer.controller.js.
-const s3 = new AWS.S3({ region: process.env.AWS_REGION, signatureVersion: 'v4' });
+const s3 = new AWS.S3({ region: process.env.AWS_REGION, signatureVersion: 'v4', sslEnabled: true });
 
 const DRAFT_FEATURE = 'resume_builder_draft';
 const BUILD_FEATURE = 'resume_builder';

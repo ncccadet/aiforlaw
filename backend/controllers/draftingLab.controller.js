@@ -40,7 +40,7 @@ const { draftLibrary } = require('../data/draftLibrary.data');
 const { pool, queryAsCollege } = require('../config/db');
 const draftQueue = new Queue('drafting-lab', { connection: require('../config/redisConnection') });
 
-const s3 = new AWS.S3({ region: process.env.AWS_REGION, signatureVersion: 'v4' });
+const s3 = new AWS.S3({ region: process.env.AWS_REGION, signatureVersion: 'v4', sslEnabled: true });
 const BUCKET = process.env.S3_BUCKET_FILES;
 
 const DISCLAIMER = 'For educational purposes only. Verify with a qualified advocate.';
