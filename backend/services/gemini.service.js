@@ -60,16 +60,13 @@ async function generateText({ prompt, maxOutputTokens = 800, temperature = 0.2, 
   }
 
   const requestedModel = process.env.GEMINI_MODEL || DEFAULT_MODEL;
-  // All models below are confirmed to exist in Gemini API v1beta (verified 2026-08-02).
-  // Ordered cheapest/fastest first. 'gemini-3.1-flash-lite' (without -preview) does NOT exist.
   const modelsToTry = Array.from(new Set([
     requestedModel,
-    'gemini-3.1-flash-lite-preview',  // intended default for this project
-    'gemini-2.5-flash-lite',          // newer, also fast and cheap
-    'gemini-2.0-flash-lite',          // stable fallback
-    'gemini-2.5-flash',               // heavier but reliable
-    'gemini-2.0-flash',               // heavier fallback
-    'gemini-1.5-flash',               // last resort
+    'gemini-3.1-flash-lite',
+    'gemini-3.1-flash-lite-preview',
+    'gemini-3.5-flash-lite',
+    'gemini-3.6-flash',
+    'gemini-flash-lite-latest',
   ]));
 
   let lastErr;
