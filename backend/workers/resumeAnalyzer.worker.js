@@ -162,30 +162,29 @@ const hasSuspiciousPdfSignals = (buffer) => {
   return SUSPICIOUS_PDF_SIGNALS.some((sig) => raw.includes(sig));
 };
 
-const buildPrompt = (resumeText) => `You are an expert legal-careers résumé reviewer for Indian law students.
-Analyse the résumé text between the <resume> tags.
+const buildPrompt = (resumeText) => `You are an expert legal-careers résumé reviewer for Indian law students and legal professionals.
+Analyse the résumé text between the <resume> tags against strict Indian legal industry standards.
 
 First decide whether the document actually is a résumé / CV (not an invoice, letter,
 notes, article, or any other document). If it is NOT a résumé, respond with EXACTLY:
 {"isResume": false, "reason": "<short reason>"}
 
-If it IS a résumé, score it on these SEVEN parameters, in this exact order:
+If it IS a résumé, score it on these SEVEN parameters, evaluating key Indian law points (such as Moot Courts, Legal Drafting, Judicial/Chamber/Law Firm Internships, Legal Research Databases like SCC Online/Manupatra, and knowledge of BNS/BNSS/BSA 2023 & statutory acts):
 ${PARAMETERS.map((p, i) => `${i + 1}. ${p}`).join('\n')}
 
 Respond with STRICT JSON only (no markdown, no prose) in this shape:
 {
   "isResume": true,
   "overallScore": <integer 0-100>,
-  "summary": "<one or two sentence overall impression>",
+  "summary": "<one or two sentence overall impression highlighting legal domain strengths>",
   "parameters": [
     { "name": "<one of the 7 names, exact>", "score": <integer 0-100>,
-      "strengths": ["<short point>", "..."],
-      "improvements": ["<specific, actionable point>", "..."] }
+      "strengths": ["<short law point / strength>", "..."],
+      "improvements": ["<specific, actionable law-resume improvement>", "..."] }
   ]
 }
 Rules: exactly 7 objects in "parameters", names exactly as listed and in order.
-1-3 bullet points per list. Be specific and constructive. Do not invent facts that
-are not in the résumé. Keep the whole response under ${MAX_OUTPUT_TOKENS} tokens.
+1-3 bullet points per list. Evaluate specifically for law careers (chambers, law firms, corporate legal teams, litigation). Keep response under ${MAX_OUTPUT_TOKENS} tokens.
 
 <resume>
 ${resumeText}
